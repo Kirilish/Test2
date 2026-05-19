@@ -59,7 +59,11 @@ class Part {
   final List<Map<String, dynamic>>? fitments;
   final String? description;
   Map<String, dynamic> toJson() => {'id': id, 'title': title, 'brand': brand, 'model': model, 'generation': generation, 'part_name': partName, 'price': price, 'currency': currency, 'address': address, 'main_image': mainImage, 'url': url, 'oem': oem, 'images': images, 'fitments': fitments, 'description': description};
-  factory Part.fromJson(Map<String, dynamic> j) => Part(id: (j['id'] ?? 0) as int, title: '${j['title'] ?? ''}', brand: '${j['brand'] ?? ''}', model: '${j['model'] ?? ''}', generation: '${j['generation'] ?? ''}', partName: '${j['part_name'] ?? ''}', price: j['price'] as num?, currency: j['currency']?.toString(), address: j['address']?.toString(), mainImage: j['main_image']?.toString(), url: j['url']?.toString(), oem: j['oem'], images: (j['images'] as List?)?.map((e) => '$e').toList(), fitments: (j['fitments'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList(), description: j['description']?.toString());
+  factory Part.fromJson(Map<String, dynamic> j) {
+    final imgs = (j['images'] as List?)?.map((e) => '$e').toList();
+    final main = j['main_image']?.toString();
+    return Part(id: (j['id'] ?? 0) as int, title: '${j['title'] ?? ''}', brand: '${j['brand'] ?? ''}', model: '${j['model'] ?? ''}', generation: '${j['generation'] ?? ''}', partName: '${j['part_name'] ?? ''}', price: j['price'] as num?, currency: j['currency']?.toString(), address: j['address']?.toString(), mainImage: (main == null || main.isEmpty) ? (imgs != null && imgs.isNotEmpty ? imgs.first : null) : main, url: j['url']?.toString(), oem: j['oem'], images: imgs, fitments: (j['fitments'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList(), description: j['description']?.toString());
+  }
   static String encodeList(List<Part> list) => jsonEncode(list.map((e) => e.toJson()).toList());
   static List<Part> decodeList(String raw) => (jsonDecode(raw) as List).map((e) => Part.fromJson(Map<String, dynamic>.from(e))).toList();
 }

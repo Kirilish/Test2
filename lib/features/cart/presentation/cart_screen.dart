@@ -3,15 +3,23 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/models.dart';
 import '../../../core/providers.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  bool _submitting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final repo = ref.read(localRepoProvider);
     final items = repo.getCart();
     final total = items.fold<double>(0, (sum, e) {
@@ -54,13 +62,20 @@ class CartScreen extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () async {
-                          final ok = await _checkout(items, total, ref);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Спасибо за заказ! Мы скоро свяжемся с вами.' : 'Спасибо за заказ! Сохранили локально, отправка в Telegram не удалась.')));
-                          }
-                        },
-                        child: const Text('Оформить заказ'),
+                        onPressed: _submitting
+                            ? null
+                            : () async {
+                                setState(() => _submitting = true);
+                                final sentToTelegram = await _checkout(items, total);
+                                if (!mounted) return;
+                                setState(() => _submitting = false);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(sentToTelegram
+                                        ? 'Спасибо за заказ! Мы скоро свяжемся с вами.'
+                                        : 'Спасибо за заказ! Заказ сохранен, Telegram временно недоступен.')));
+                                context.push('/orders');
+                              },
+                        child: _submitting ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Оформить заказ'),
                       ),
                     )
                   ]),
@@ -70,26 +85,26 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Future<bool> _checkout(List<Map<String, dynamic>> items, double total, WidgetRef ref) async {
+  Future<bool> _checkout(List<Map<String, dynamic>> items, double total) async {
+    final payload = {'source': 'mobile_app', 'total': total, 'items': items};
+    bool sent = false;
     try {
-      final payload = {
-        'source': 'mobile_app',
-        'total': total,
-        'items': items,
-      };
-      await Dio(BaseOptions(baseUrl: 'http://10.0.2.2:8080')).post('/api/orders/telegram', data: payload);
-      await ref.read(localRepoProvider).saveOrder(OrderHistoryItem(
-            id: 'ord_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999)}',
-            createdAt: DateTime.now(),
-            total: total,
-            currency: 'USD',
-            itemsCount: items.length,
-            status: 'отправлен',
-          ));
-      await ref.read(localRepoProvider).clearCart();
-      return true;
+      await Dio(BaseOptions(baseUrl: 'http://10.0.2.2:8080', connectTimeout: const Duration(seconds: 8), receiveTimeout: const Duration(seconds: 8)))
+          .post('/api/orders/telegram', data: payload);
+      sent = true;
     } catch (_) {
-      return false;
+      sent = false;
     }
+
+    await ref.read(localRepoProvider).saveOrder(OrderHistoryItem(
+          id: 'ord_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999)}',
+          createdAt: DateTime.now(),
+          total: total,
+          currency: 'USD',
+          itemsCount: items.length,
+          status: sent ? 'отправлен' : 'сохранен локально',
+        ));
+    await ref.read(localRepoProvider).clearCart();
+    return sent;
   }
 }

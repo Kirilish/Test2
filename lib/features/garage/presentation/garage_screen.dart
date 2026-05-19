@@ -513,8 +513,8 @@ class GarageScreen extends ConsumerWidget {
     try {
       final dio = Dio(
         BaseOptions(
-          connectTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 12),
+          connectTimeout: const Duration(seconds: 25),
+          receiveTimeout: const Duration(seconds: 25),
           headers: const {'Accept': 'application/json'},
         ),
       );
@@ -569,7 +569,7 @@ class GarageScreen extends ConsumerWidget {
       );
     } on DioException catch (e) {
       final msg = e.type == DioExceptionType.connectionError
-          ? 'Нет сети или блокировка доступа к VIN API.'
+          ? 'Нет сети или VIN API долго отвечает. Проверьте интернет/VPN и попробуйте снова.'
           : 'Ошибка запроса VIN API: ${e.message}';
       return _VinDecodedResult(
         ok: false,
