@@ -93,7 +93,6 @@ class ServiceRecord {
   final double price;
   final String currency;
   final String comment;
-  final String photoPath;
   final int? nextMileage;
   final DateTime? nextDate;
 
