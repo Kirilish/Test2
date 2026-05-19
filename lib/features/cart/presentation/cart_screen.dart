@@ -57,7 +57,7 @@ class CartScreen extends ConsumerWidget {
                         onPressed: () async {
                           final ok = await _checkout(items, total, ref);
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заказ оформлен' : 'Ошибка отправки в Telegram')));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Спасибо за заказ! Мы скоро свяжемся с вами.' : 'Спасибо за заказ! Сохранили локально, отправка в Telegram не удалась.')));
                           }
                         },
                         child: const Text('Оформить заказ'),

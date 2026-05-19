@@ -205,7 +205,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     width: 100,
                                     height: 100,
                                     child: p.mainImage == null || p.mainImage!.isEmpty
-                                        ? Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported))
+                                        ? CachedNetworkImage(imageUrl: 'https://api.filesmonster.ru/gallery/original/43/car-part/6155028/28311029.jpg', fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported)))
                                         : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
                                   ),
                                 ),
@@ -223,8 +223,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               const SizedBox(height: 8),
                               Wrap(spacing: 6, runSpacing: 6, children: [
                                 FilledButton.tonal(onPressed: () => _openDetail(context, p), child: const Text('Подробнее')),
-                                OutlinedButton(onPressed: () => ref.read(localRepoProvider).toggleFavorite(p), child: const Text('В избранное')),
-                                OutlinedButton(onPressed: () => ref.read(localRepoProvider).addToCart(p), child: const Text('В корзину')),
+                                OutlinedButton(onPressed: () async { final ok = await ref.read(localRepoProvider).addFavoriteIfAbsent(p); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Добавлено в избранное' : 'Уже в избранном'))); }, child: const Text('В избранное')), 
+                                OutlinedButton(onPressed: () async { final ok = await ref.read(localRepoProvider).addToCartIfAbsent(p); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заказ добавлен в корзину' : 'Уже в корзине'))); }, child: const Text('В корзину')), 
                               ])
                             ]),
                           ),
@@ -277,7 +277,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 const SizedBox(height: 8),
                 Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
                 Text('Адрес: ${d.address ?? '-'}'),
-                if (d.oem != null && d.oem!.isNotEmpty) Text('OEM: ${d.oem}'),
+                if (d.oem != null) Text('OEM: ${d.oem is List ? (d.oem as List).join(', ') : d.oem}'),
+                if (d.fitments != null && d.fitments!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text('Применимость на другие авто:', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ...d.fitments!.take(12).map((f) => Text('• ${f['brand'] ?? '-'} ${f['model'] ?? '-'} ${f['generation'] ?? ''}')),
+                ],
                 const SizedBox(height: 8),
                 ElevatedButton(
                 onPressed: () async {

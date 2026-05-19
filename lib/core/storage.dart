@@ -36,21 +36,22 @@ class LocalRepo {
   Future<void> saveService(ServiceRecord r) => LocalStorage.getBox(LocalStorage.serviceBox).put(r.id, r.toJson());
 
   List<Part> getFavorites() => LocalStorage.getBox(LocalStorage.favoritesBox).values.map((e) => Part.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-  Future<void> toggleFavorite(Part p) async {
+  Future<bool> addFavoriteIfAbsent(Part p) async {
     final b = LocalStorage.getBox(LocalStorage.favoritesBox);
-    if (b.containsKey(p.id)) {
-      await b.delete(p.id);
-    } else {
-      await b.put(p.id, p.toJson());
-    }
+    if (b.containsKey(p.id)) return false;
+    await b.put(p.id, p.toJson());
+    return true;
   }
 
+  Future<void> removeFavorite(Part p) => LocalStorage.getBox(LocalStorage.favoritesBox).delete(p.id);
+
   List<Map<String, dynamic>> getCart() => LocalStorage.getBox(LocalStorage.cartBox).values.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-  Future<void> addToCart(Part p) async {
+  Future<bool> addToCartIfAbsent(Part p) async {
     final b = LocalStorage.getBox(LocalStorage.cartBox);
     final ex = b.get(p.id);
-    final qty = ex == null ? 1 : (ex['quantity'] as int) + 1;
-    await b.put(p.id, {'part': p.toJson(), 'quantity': qty});
+    if (ex != null) return false;
+    await b.put(p.id, {'part': p.toJson(), 'quantity': 1});
+    return true;
   }
 
   List<AppRequest> getRequests() => LocalStorage.getBox(LocalStorage.requestsBox).values.map((e) => AppRequest.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
