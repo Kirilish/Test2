@@ -65,8 +65,14 @@ OpenAI API key **нельзя хранить в мобильном прилож�
    npm run dev
    ```
 
-По умолчанию в Android emulator для локального backend используйте URL:
+По умолчанию в Android emulator для локального backend используется URL:
 `http://10.0.2.2:8080`
+
+Проверьте здоровье proxy:
+```bash
+curl http://localhost:8080/health
+```
+Если AI отвечает шаблонно, убедитесь что в AI экране включен режим `Backend AI Proxy`, а не `Mock AI`.
 
 ## Что реализовано в MVP
 - Нижняя навигация: Главная / Гараж / Маркет / AI / Профиль.

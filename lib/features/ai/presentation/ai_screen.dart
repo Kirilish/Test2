@@ -73,7 +73,7 @@ class _AiScreenState extends State<AiScreen> {
   List<String> actions = const [];
   bool loading = false;
   File? attachedImage;
-  AiSettings settings = AiSettings(useProxy: false, proxyBaseUrl: 'http://10.0.2.2:8080');
+  AiSettings settings = AiSettings(useProxy: true, proxyBaseUrl: 'http://10.0.2.2:8080');
 
   @override
   void initState() {
@@ -86,6 +86,8 @@ class _AiScreenState extends State<AiScreen> {
     final raw = box.get('ai_settings');
     if (raw is Map) {
       setState(() => settings = AiSettings.fromJson(raw));
+    } else {
+      await _saveSettings();
     }
   }
 
@@ -157,7 +159,7 @@ class _AiScreenState extends State<AiScreen> {
                       actions = msg.actions;
                     });
                   } catch (e) {
-                    setState(() => answer = 'Ошибка AI: $e');
+                    setState(() => answer = 'Ошибка AI Proxy: $e\nПроверьте Base URL и /health на сервере.');
                   } finally {
                     setState(() => loading = false);
                   }

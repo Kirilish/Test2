@@ -77,6 +77,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   final c = TextEditingController();
   final scroll = ScrollController();
   bool onlyActiveCar = false;
+  String selectedCategory = '';
+  final categories = const ['Двигатель','Коробка','Фара','Бампер','Дверь','Капот','Крыло','Зеркало','Радиатор','Турбина'];
 
   @override
   void initState() {
@@ -109,6 +111,27 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               IconButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), icon: const Icon(Icons.search)),
             ]),
             const SizedBox(height: 8),
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  final label = i == 0 ? 'Все' : categories[i - 1];
+                  final active = i == 0 ? selectedCategory.isEmpty : selectedCategory == label;
+                  return ChoiceChip(
+                    label: Text(label),
+                    selected: active,
+                    onSelected: (_) async {
+                      setState(() => selectedCategory = i == 0 ? '' : label);
+                      final q = [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ');
+                      await ref.read(marketProvider.notifier).refresh(search: q);
+                    },
+                  );
+                },
+              ),
+            ),
             Row(children: [
               Expanded(
                 child: SwitchListTile.adaptive(
@@ -166,7 +189,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     height: 100,
                                     child: p.mainImage == null || p.mainImage!.isEmpty
                                         ? Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported))
-                                        : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover),
+                                        : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
                                   ),
                                 ),
                                 const SizedBox(width: 10),

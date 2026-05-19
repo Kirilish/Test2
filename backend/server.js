@@ -4,16 +4,50 @@ import cors from 'cors';
 import OpenAI from 'openai';
 
 const app = express();
+
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { message, image_base64 } = req.body || {};
+
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        error: 'missing_openai_api_key',
+        details: 'OPENAI_API_KEY is not set in .env',
+      });
+    }
+
+    const content = [
+      {
+        type: 'input_text',
+        text: message,
+      },
+    ];
+
+    if (
+      image_base64 &&
+      typeof image_base64 === 'string' &&
+      image_base64.trim().length > 0
+    ) {
+      const imageUrl = image_base64.startsWith('data:image')
+        ? image_base64
+        : `data:image/jpeg;base64,${image_base64}`;
+
+      content.push({
+        type: 'input_image',
+        image_url: imageUrl,
+        detail: 'auto',
+      });
     }
 
     const input = [
@@ -24,14 +58,7 @@ app.post('/api/ai/chat', async (req, res) => {
       },
       {
         role: 'user',
-        content: [
-          { type: 'input_text', text: message },
-          if (image_base64 != null && image_base64.toString().isNotEmpty)
-            {
-              type: 'input_image',
-              image_url: `data:image/jpeg;base64,${image_base64}`,
-            },
-        ],
+        content,
       },
     ];
 
@@ -42,15 +69,27 @@ app.post('/api/ai/chat', async (req, res) => {
     });
 
     const text = response.output_text || 'Не удалось получить ответ.';
-    res.json({ text, actions: ['Открыть маркет', 'Оставить заявку'] });
+
+    res.json({
+      text,
+      actions: ['Открыть маркет', 'Оставить заявку'],
+    });
   } catch (e) {
-    res.status(500).json({ error: 'ai_proxy_error', details: e?.message || 'unknown_error' });
+    console.error('AI proxy error:', e);
+
+    res.status(500).json({
+      error: 'ai_proxy_error',
+      details: e?.message || 'unknown_error',
+    });
   }
 });
 
-app.get('/health', (_, res) => res.json({ ok: true }));
+app.get('/health', (_, res) => {
+  res.json({ ok: true });
+});
 
 const port = Number(process.env.PORT || 8080);
+
 app.listen(port, () => {
   console.log(`AI proxy started on http://localhost:${port}`);
 });
