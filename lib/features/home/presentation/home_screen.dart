@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../garage/presentation/garage_screen.dart';
 
@@ -29,8 +30,9 @@ class HomeScreen extends ConsumerWidget {
       );
     }
     final car = cars.firstWhere((e) => e.id == active, orElse: () => cars.first);
-    final list = services.where((e) => e.carId == car.id).toList();
+    final list = services.where((e) => e.carId == car.id).toList()..sort((a, b) => b.date.compareTo(a.date));
     final total = list.fold<double>(0, (p, e) => p + e.price);
+    final reminders = _buildReminders(car.mileage, list);
     return Scaffold(
       appBar: AppBar(title: const Text('Главная')),
       body: ListView(
@@ -50,18 +52,32 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text('Быстрые действия', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text('Напоминания по обслуживанию', style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: const [
-              _QuickAction(label: 'Подобрать запчасть', icon: Icons.search),
-              _QuickAction(label: 'Открыть маркет', icon: Icons.storefront),
-              _QuickAction(label: 'Добавить ремонт', icon: Icons.build),
-              _QuickAction(label: 'Спросить AI', icon: Icons.smart_toy),
-            ],
-          )
+          if (reminders.isEmpty)
+            const Card(child: ListTile(title: Text('Нет активных напоминаний')))
+          else
+            ...reminders.map(
+              (r) => Card(
+                color: r.overdue ? Colors.red.withOpacity(0.2) : null,
+                child: ListTile(
+                  leading: Icon(r.overdue ? Icons.warning_amber_rounded : Icons.notifications_active_outlined),
+                  title: Text(r.title),
+                  subtitle: Text(r.subtitle),
+                  trailing: Text(r.overdue ? 'Просрочено' : 'Скоро'),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          const Text('Последние работы', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          ...list.take(5).map((e) => Card(
+                child: ListTile(
+                  title: Text(e.title),
+                  subtitle: Text('${DateFormat('dd.MM.yyyy').format(e.date)} • ${e.mileage} км'),
+                  trailing: Text('${e.price.toStringAsFixed(0)} ${e.currency}'),
+                ),
+              )),
         ],
       ),
     );
@@ -73,19 +89,27 @@ class HomeScreen extends ConsumerWidget {
           child: Row(children: [Icon(icon), const SizedBox(width: 8), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title), Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))]))]),
         ),
       );
+
+  List<_ReminderItem> _buildReminders(int currentMileage, List<dynamic> list) {
+    final now = DateTime.now();
+    return list
+        .where((s) => s.nextMileage != null || s.nextDate != null)
+        .map((s) {
+          final byMileage = s.nextMileage != null ? (s.nextMileage as int) - currentMileage : null;
+          final byDate = s.nextDate != null ? (s.nextDate as DateTime).difference(now).inDays : null;
+          final overdue = (byMileage != null && byMileage <= 0) || (byDate != null && byDate <= 0);
+          final parts = <String>[];
+          if (byMileage != null) parts.add(byMileage <= 0 ? 'по пробегу: просрочено' : 'осталось $byMileage км');
+          if (byDate != null) parts.add(byDate <= 0 ? 'по дате: просрочено' : 'осталось $byDate дн');
+          return _ReminderItem(title: s.title, subtitle: parts.join(' • '), overdue: overdue);
+        })
+        .toList();
+  }
 }
 
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.label, required this.icon});
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Скоро: $label'))),
-    );
-  }
+class _ReminderItem {
+  _ReminderItem({required this.title, required this.subtitle, required this.overdue});
+  final String title;
+  final String subtitle;
+  final bool overdue;
 }

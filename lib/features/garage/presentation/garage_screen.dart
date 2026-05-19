@@ -78,7 +78,7 @@ class GarageScreen extends ConsumerWidget {
 
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
         title: Text(car == null ? 'Добавить авто' : 'Редактировать авто'),
         content: SingleChildScrollView(
           child: Column(
@@ -131,40 +131,58 @@ class GarageScreen extends ConsumerWidget {
     final mileage = TextEditingController(text: '${c.mileage}');
     final price = TextEditingController();
     final nextMileage = TextEditingController();
+    final nextDays = TextEditingController();
+    final serviceTypes = const ['масло двигателя', 'масло АКПП', 'антифриз', 'тормозная жидкость', 'свечи', 'фильтр салона', 'колодки', 'подвеска', 'прочее'];
+    String selectedType = serviceTypes.first;
+
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Добавить обслуживание'),
-        content: SingleChildScrollView(
-          child: Column(children: [
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Название')),
-            TextField(controller: mileage, decoration: const InputDecoration(labelText: 'Пробег')),
-            TextField(controller: price, decoration: const InputDecoration(labelText: 'Цена')),
-            TextField(controller: nextMileage, decoration: const InputDecoration(labelText: 'След. замена (пробег)')),
-          ]),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Добавить обслуживание'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedType,
+                  items: serviceTypes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => selectedType = v);
+                  },
+                  decoration: const InputDecoration(labelText: 'Тип обслуживания'),
+                ),
+                TextField(controller: title, decoration: const InputDecoration(labelText: 'Название')),
+                TextField(controller: mileage, decoration: const InputDecoration(labelText: 'Пробег')),
+                TextField(controller: price, decoration: const InputDecoration(labelText: 'Цена')),
+                TextField(controller: nextMileage, decoration: const InputDecoration(labelText: 'След. замена (пробег)')),
+                TextField(controller: nextDays, decoration: const InputDecoration(labelText: 'След. замена (через дней)')),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                await ref.read(localRepoProvider).saveService(ServiceRecord(
+                      id: 'srv_${DateTime.now().millisecondsSinceEpoch}',
+                      carId: c.id,
+                      type: selectedType,
+                      title: title.text,
+                      date: DateTime.now(),
+                      mileage: int.tryParse(mileage.text) ?? 0,
+                      price: double.tryParse(price.text) ?? 0,
+                      currency: 'USD',
+                      comment: '',
+                      nextMileage: int.tryParse(nextMileage.text),
+                      nextDate: int.tryParse(nextDays.text) == null ? null : DateTime.now().add(Duration(days: int.parse(nextDays.text))),
+                    ));
+                ref.read(servicesProvider.notifier).state = ref.read(localRepoProvider).getServices();
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () async {
-              await ref.read(localRepoProvider).saveService(ServiceRecord(
-                    id: 'srv_${DateTime.now().millisecondsSinceEpoch}',
-                    carId: c.id,
-                    type: 'прочее',
-                    title: title.text,
-                    date: DateTime.now(),
-                    mileage: int.tryParse(mileage.text) ?? 0,
-                    price: double.tryParse(price.text) ?? 0,
-                    currency: 'USD',
-                    comment: '',
-                    nextMileage: int.tryParse(nextMileage.text),
-                  ));
-              ref.read(servicesProvider.notifier).state = ref.read(localRepoProvider).getServices();
-              if (!dialogContext.mounted) return;
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Сохранить'),
-          )
-        ],
       ),
     );
   }
