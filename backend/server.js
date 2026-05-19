@@ -98,10 +98,7 @@ app.post('/api/orders/telegram', async (req, res) => {
       const p = x.part || {};
       return `• ${p.title || '-'} x${x.quantity || 1} (${p.price || '-'} ${p.currency || ''})`;
     });
-    const text = `Новый заказ из приложения Zapshop Garage
-Итого: ${total || 0} USD
-${lines.join('
-')}`;
+    const text = `Новый заказ из приложения Zapshop Garage\nИтого: ${total || 0} USD\n${lines.join('\n')}`;
 
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',

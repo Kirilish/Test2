@@ -45,7 +45,17 @@ class ZapshopApiClient {
 
   Future<Part> getPartDetails(int id) async {
     final res = await _dio.get('/parts/$id');
-    return Part.fromJson((res.data as Map<String, dynamic>)['item'] ?? (res.data as Map<String, dynamic>));
+    final root = res.data as Map<String, dynamic>;
+    final item = Map<String, dynamic>.from((root['item'] ?? root) as Map);
+    final raw = item['raw'] is Map ? Map<String, dynamic>.from(item['raw'] as Map) : <String, dynamic>{};
+    final oem = item['oem'];
+    if ((oem == null || (oem is List && oem.isEmpty) || (oem is String && oem.trim().isEmpty)) && raw['original_number'] != null) {
+      item['oem'] = raw['original_number'];
+    }
+    if (item['images'] == null && item['main_image'] != null) {
+      item['images'] = [item['main_image']];
+    }
+    return Part.fromJson(item);
   }
 
   Future<void> createRequest(Map<String, dynamic> payload) async {
