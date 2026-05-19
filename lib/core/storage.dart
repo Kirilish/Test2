@@ -1,0 +1,56 @@
+import 'package:hive_flutter/hive_flutter.dart';
+
+import 'models.dart';
+
+class LocalStorage {
+  static const carsBox = 'cars';
+  static const serviceBox = 'service_records';
+  static const favoritesBox = 'favorites';
+  static const cartBox = 'cart';
+  static const requestsBox = 'requests';
+  static const profileBox = 'profile';
+
+  static Future<void> init() async {
+    await Hive.initFlutter();
+    await Future.wait([
+      Hive.openBox(carsBox),
+      Hive.openBox(serviceBox),
+      Hive.openBox(favoritesBox),
+      Hive.openBox(cartBox),
+      Hive.openBox(requestsBox),
+      Hive.openBox(profileBox),
+    ]);
+  }
+
+  static Box getBox(String name) => Hive.box(name);
+}
+
+class LocalRepo {
+  List<Car> getCars() => LocalStorage.getBox(LocalStorage.carsBox).values.map((e) => Car.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
+  Future<void> saveCar(Car car) => LocalStorage.getBox(LocalStorage.carsBox).put(car.id, car.toJson());
+  Future<void> deleteCar(String id) => LocalStorage.getBox(LocalStorage.carsBox).delete(id);
+
+  List<ServiceRecord> getServices() => LocalStorage.getBox(LocalStorage.serviceBox).values.map((e) => ServiceRecord.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
+  Future<void> saveService(ServiceRecord r) => LocalStorage.getBox(LocalStorage.serviceBox).put(r.id, r.toJson());
+
+  List<Part> getFavorites() => LocalStorage.getBox(LocalStorage.favoritesBox).values.map((e) => Part.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+  Future<void> toggleFavorite(Part p) async {
+    final b = LocalStorage.getBox(LocalStorage.favoritesBox);
+    if (b.containsKey(p.id)) {
+      await b.delete(p.id);
+    } else {
+      await b.put(p.id, p.toJson());
+    }
+  }
+
+  List<Map<String, dynamic>> getCart() => LocalStorage.getBox(LocalStorage.cartBox).values.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  Future<void> addToCart(Part p) async {
+    final b = LocalStorage.getBox(LocalStorage.cartBox);
+    final ex = b.get(p.id);
+    final qty = ex == null ? 1 : (ex['quantity'] as int) + 1;
+    await b.put(p.id, {'part': p.toJson(), 'quantity': qty});
+  }
+
+  List<AppRequest> getRequests() => LocalStorage.getBox(LocalStorage.requestsBox).values.map((e) => AppRequest.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
+  Future<void> saveRequest(AppRequest r) => LocalStorage.getBox(LocalStorage.requestsBox).put(r.id, r.toJson());
+}
