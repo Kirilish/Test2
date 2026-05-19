@@ -91,17 +91,23 @@ class GarageScreen extends ConsumerWidget {
                   IconButton(
                     tooltip: 'Декодировать VIN',
                     onPressed: () async {
-                      final data = await _decodeVin(vin.text.trim());
-                      if (data == null) {
-                        if (dialogContext.mounted) ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('VIN не удалось декодировать')));
+                      final result = await _decodeVin(vin.text);
+                      if (!dialogContext.mounted) return;
+                      if (result == null) {
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('VIN не удалось декодировать')));
                         return;
                       }
-                      brand.text = data.make ?? brand.text;
-                      model.text = data.model ?? model.text;
-                      year.text = data.year ?? year.text;
-                      if (dialogContext.mounted) {
-                        ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('VIN декодирован: ${data.make ?? '-'} ${data.model ?? '-'} ${data.year ?? '-'}')));
+                      if (!result.ok) {
+                        final msg = result.suggestedVin != null
+                            ? 'VIN содержит ошибку. Попробуйте: ${result.suggestedVin}'
+                            : (result.errorText ?? 'VIN невалиден. Проверьте длину и символы.');
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(msg)));
+                        return;
                       }
+                      brand.text = result.make ?? brand.text;
+                      model.text = result.model ?? model.text;
+                      year.text = result.year ?? year.text;
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('VIN декодирован: ${result.make ?? '-'} ${result.model ?? '-'} ${result.year ?? '-'}')));
                     },
                     icon: const Icon(Icons.qr_code_scanner),
                   ),
@@ -149,25 +155,49 @@ class GarageScreen extends ConsumerWidget {
     );
   }
 
-  Future<_VinDecoded?> _decodeVin(String vin) async {
-    if (vin.length < 11) return null;
+  Future<_VinDecodedResult?> _decodeVin(String rawVin) async {
+    final vin = _normalizeVin(rawVin);
+    if (vin.length != 17) {
+      return _VinDecodedResult(ok: false, errorText: 'VIN должен содержать 17 символов после очистки.');
+    }
     try {
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)));
       final res = await dio.get('https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/$vin?format=json');
       final raw = Map<String, dynamic>.from(res.data as Map);
       final results = (raw['Results'] as List?) ?? [];
-      if (results.isEmpty) return null;
+      if (results.isEmpty) return _VinDecodedResult(ok: false, errorText: 'Пустой ответ декодера.');
       final map = Map<String, dynamic>.from(results.first as Map);
+
       String? normalize(String key) {
         final v = map[key]?.toString().trim();
         if (v == null || v.isEmpty || v == '0' || v == 'Not Applicable') return null;
         return v;
       }
 
-      return _VinDecoded(make: normalize('Make'), model: normalize('Model'), year: normalize('ModelYear'));
+      final errorCode = normalize('ErrorCode');
+      final errorText = normalize('ErrorText');
+      final suggestedVin = _normalizeVin(normalize('SuggestedVIN') ?? '');
+      final make = normalize('Make');
+      final model = normalize('Model');
+      final year = normalize('ModelYear');
+      final ok = (errorCode == null || errorCode == '0') && (make != null || model != null || year != null);
+
+      return _VinDecodedResult(
+        ok: ok,
+        make: make,
+        model: model,
+        year: year,
+        errorText: errorText,
+        suggestedVin: suggestedVin.isEmpty ? null : suggestedVin,
+      );
     } catch (_) {
-      return null;
+      return _VinDecodedResult(ok: false, errorText: 'Ошибка сети VIN декодера.');
     }
+  }
+
+  String _normalizeVin(String vin) {
+    final clean = vin.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    return clean.replaceAll(RegExp(r'[IOQ]'), '');
   }
 
   void _addService(BuildContext context, WidgetRef ref, Car c) {
@@ -232,9 +262,12 @@ class GarageScreen extends ConsumerWidget {
   }
 }
 
-class _VinDecoded {
-  _VinDecoded({this.make, this.model, this.year});
+class _VinDecodedResult {
+  _VinDecodedResult({required this.ok, this.make, this.model, this.year, this.errorText, this.suggestedVin});
+  final bool ok;
   final String? make;
   final String? model;
   final String? year;
+  final String? errorText;
+  final String? suggestedVin;
 }
