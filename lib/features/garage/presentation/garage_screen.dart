@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -78,12 +79,34 @@ class GarageScreen extends ConsumerWidget {
 
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(car == null ? 'Добавить авто' : 'Редактировать авто'),
         content: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(controller: vin, decoration: const InputDecoration(labelText: 'VIN')),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: vin, decoration: const InputDecoration(labelText: 'VIN'))),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Декодировать VIN',
+                    onPressed: () async {
+                      final data = await _decodeVin(vin.text.trim());
+                      if (data == null) {
+                        if (dialogContext.mounted) ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('VIN не удалось декодировать')));
+                        return;
+                      }
+                      brand.text = data.make ?? brand.text;
+                      model.text = data.model ?? model.text;
+                      year.text = data.year ?? year.text;
+                      if (dialogContext.mounted) {
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('VIN декодирован: ${data.make ?? '-'} ${data.model ?? '-'} ${data.year ?? '-'}')));
+                      }
+                    },
+                    icon: const Icon(Icons.qr_code_scanner),
+                  ),
+                ],
+              ),
               TextField(controller: brand, decoration: const InputDecoration(labelText: 'Марка')),
               TextField(controller: model, decoration: const InputDecoration(labelText: 'Модель')),
               TextField(controller: generation, decoration: const InputDecoration(labelText: 'Поколение')),
@@ -124,6 +147,27 @@ class GarageScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<_VinDecoded?> _decodeVin(String vin) async {
+    if (vin.length < 11) return null;
+    try {
+      final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)));
+      final res = await dio.get('https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/$vin?format=json');
+      final raw = Map<String, dynamic>.from(res.data as Map);
+      final results = (raw['Results'] as List?) ?? [];
+      if (results.isEmpty) return null;
+      final map = Map<String, dynamic>.from(results.first as Map);
+      String? normalize(String key) {
+        final v = map[key]?.toString().trim();
+        if (v == null || v.isEmpty || v == '0' || v == 'Not Applicable') return null;
+        return v;
+      }
+
+      return _VinDecoded(make: normalize('Make'), model: normalize('Model'), year: normalize('ModelYear'));
+    } catch (_) {
+      return null;
+    }
   }
 
   void _addService(BuildContext context, WidgetRef ref, Car c) {
@@ -186,4 +230,11 @@ class GarageScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _VinDecoded {
+  _VinDecoded({this.make, this.model, this.year});
+  final String? make;
+  final String? model;
+  final String? year;
 }
