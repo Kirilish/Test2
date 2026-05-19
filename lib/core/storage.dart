@@ -9,6 +9,7 @@ class LocalStorage {
   static const cartBox = 'cart';
   static const requestsBox = 'requests';
   static const profileBox = 'profile';
+  static const ordersBox = 'orders';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -19,6 +20,7 @@ class LocalStorage {
       Hive.openBox(cartBox),
       Hive.openBox(requestsBox),
       Hive.openBox(profileBox),
+      Hive.openBox(ordersBox),
     ]);
   }
 
@@ -53,4 +55,9 @@ class LocalRepo {
 
   List<AppRequest> getRequests() => LocalStorage.getBox(LocalStorage.requestsBox).values.map((e) => AppRequest.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
   Future<void> saveRequest(AppRequest r) => LocalStorage.getBox(LocalStorage.requestsBox).put(r.id, r.toJson());
+
+  List<OrderHistoryItem> getOrders() => LocalStorage.getBox(LocalStorage.ordersBox).values.map((e) => OrderHistoryItem.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
+  Future<void> saveOrder(OrderHistoryItem o) => LocalStorage.getBox(LocalStorage.ordersBox).put(o.id, o.toJson());
+  Future<void> clearCart() => LocalStorage.getBox(LocalStorage.cartBox).clear();
 }
+

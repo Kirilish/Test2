@@ -8,6 +8,7 @@ import '../features/garage/presentation/garage_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/market/presentation/market_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/orders/presentation/orders_history_screen.dart';
 
 final appRouter = GoRouter(
   routes: [
@@ -23,6 +24,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
     GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
+    GoRoute(path: '/orders', builder: (_, __) => const OrdersHistoryScreen()),
   ],
 );
 

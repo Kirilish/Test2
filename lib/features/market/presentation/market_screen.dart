@@ -248,17 +248,38 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           if (s.connectionState != ConnectionState.done) return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
           if (s.hasError || s.data == null) return const SizedBox(height: 300, child: Center(child: Text('Ошибка загрузки карточки')));
           final d = s.data!;
+          final images = (d.images != null && d.images!.isNotEmpty) ? d.images! : (d.mainImage == null ? <String>[] : [d.mainImage!]);
           return Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d.title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              const Text('Совместимость не подтверждена. Отправьте VIN/OEM для проверки.'),
-              const SizedBox(height: 8),
-              Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
-              Text('Адрес: ${d.address ?? '-'}'),
-              const SizedBox(height: 8),
-              ElevatedButton(
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (images.isNotEmpty)
+                  SizedBox(
+                    height: 220,
+                    child: PageView(
+                      children: images
+                          .map((u) => Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: CachedNetworkImage(imageUrl: u, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(d.title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text('Марка/модель: ${d.brand} ${d.model} ${d.generation}'),
+                Text('Деталь: ${d.partName}'),
+                const Text('Совместимость не подтверждена. Отправьте VIN/OEM для проверки.'),
+                const SizedBox(height: 8),
+                Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
+                Text('Адрес: ${d.address ?? '-'}'),
+                if (d.oem != null && d.oem!.isNotEmpty) Text('OEM: ${d.oem}'),
+                const SizedBox(height: 8),
+                ElevatedButton(
                 onPressed: () async {
                   final ok = await _sendRequest(d);
                   if (dialogContext.mounted) Navigator.of(dialogContext).pop();
@@ -266,7 +287,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 },
                 child: const Text('Оформить заявку'),
               ),
-            ]),
+              ]),
+            ),
           );
         },
       ),

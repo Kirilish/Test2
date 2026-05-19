@@ -20,7 +20,6 @@ class Car {
     required this.comment,
     this.photoPath = '',
   });
-
   final String id;
   final String vin;
   final String brand;
@@ -38,48 +37,9 @@ class Car {
   final String status;
   final String comment;
   final String photoPath;
-
   String get title => '$brand $model $year'.trim();
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'vin': vin,
-        'brand': brand,
-        'model': model,
-        'generation': generation,
-        'year': year,
-        'engine': engine,
-        'engineCode': engineCode,
-        'transmission': transmission,
-        'drive': drive,
-        'fuel': fuel,
-        'mileage': mileage,
-        'country': country,
-        'isUsaImport': isUsaImport,
-        'status': status,
-        'comment': comment,
-        'photoPath': photoPath,
-      };
-
-  factory Car.fromJson(Map<dynamic, dynamic> json) => Car(
-        id: '${json['id'] ?? ''}',
-        vin: '${json['vin'] ?? ''}',
-        brand: '${json['brand'] ?? ''}',
-        model: '${json['model'] ?? ''}',
-        generation: '${json['generation'] ?? ''}',
-        year: '${json['year'] ?? ''}',
-        engine: '${json['engine'] ?? ''}',
-        engineCode: '${json['engineCode'] ?? ''}',
-        transmission: '${json['transmission'] ?? ''}',
-        drive: '${json['drive'] ?? ''}',
-        fuel: '${json['fuel'] ?? ''}',
-        mileage: (json['mileage'] ?? 0) is int ? json['mileage'] as int : int.tryParse('${json['mileage']}') ?? 0,
-        country: '${json['country'] ?? ''}',
-        isUsaImport: json['isUsaImport'] == true,
-        status: '${json['status'] ?? 'на ходу'}',
-        comment: '${json['comment'] ?? ''}',
-        photoPath: '${json['photoPath'] ?? ''}',
-      );
+  Map<String, dynamic> toJson() => {'id': id, 'vin': vin, 'brand': brand, 'model': model, 'generation': generation, 'year': year, 'engine': engine, 'engineCode': engineCode, 'transmission': transmission, 'drive': drive, 'fuel': fuel, 'mileage': mileage, 'country': country, 'isUsaImport': isUsaImport, 'status': status, 'comment': comment, 'photoPath': photoPath};
+  factory Car.fromJson(Map<dynamic, dynamic> json) => Car(id: '${json['id'] ?? ''}', vin: '${json['vin'] ?? ''}', brand: '${json['brand'] ?? ''}', model: '${json['model'] ?? ''}', generation: '${json['generation'] ?? ''}', year: '${json['year'] ?? ''}', engine: '${json['engine'] ?? ''}', engineCode: '${json['engineCode'] ?? ''}', transmission: '${json['transmission'] ?? ''}', drive: '${json['drive'] ?? ''}', fuel: '${json['fuel'] ?? ''}', mileage: (json['mileage'] ?? 0) is int ? json['mileage'] as int : int.tryParse('${json['mileage']}') ?? 0, country: '${json['country'] ?? ''}', isUsaImport: json['isUsaImport'] == true, status: '${json['status'] ?? 'на ходу'}', comment: '${json['comment'] ?? ''}', photoPath: '${json['photoPath'] ?? ''}');
 }
 
 class ServiceRecord {
@@ -95,20 +55,8 @@ class ServiceRecord {
   final String comment;
   final int? nextMileage;
   final DateTime? nextDate;
-
   Map<String, dynamic> toJson() => {'id': id, 'carId': carId, 'type': type, 'title': title, 'date': date.toIso8601String(), 'mileage': mileage, 'price': price, 'currency': currency, 'comment': comment, 'nextMileage': nextMileage, 'nextDate': nextDate?.toIso8601String()};
-  factory ServiceRecord.fromJson(Map<dynamic, dynamic> json) => ServiceRecord(
-      id: '${json['id']}',
-      carId: '${json['carId']}',
-      type: '${json['type'] ?? ''}',
-      title: '${json['title'] ?? ''}',
-      date: DateTime.tryParse('${json['date']}') ?? DateTime.now(),
-      mileage: int.tryParse('${json['mileage'] ?? 0}') ?? 0,
-      price: double.tryParse('${json['price'] ?? 0}') ?? 0,
-      currency: '${json['currency'] ?? 'USD'}',
-      comment: '${json['comment'] ?? ''}',
-      nextMileage: json['nextMileage'] == null ? null : int.tryParse('${json['nextMileage']}'),
-      nextDate: json['nextDate'] == null ? null : DateTime.tryParse('${json['nextDate']}'));
+  factory ServiceRecord.fromJson(Map<dynamic, dynamic> json) => ServiceRecord(id: '${json['id']}', carId: '${json['carId']}', type: '${json['type'] ?? ''}', title: '${json['title'] ?? ''}', date: DateTime.tryParse('${json['date']}') ?? DateTime.now(), mileage: int.tryParse('${json['mileage'] ?? 0}') ?? 0, price: double.tryParse('${json['price'] ?? 0}') ?? 0, currency: '${json['currency'] ?? 'USD'}', comment: '${json['comment'] ?? ''}', nextMileage: json['nextMileage'] == null ? null : int.tryParse('${json['nextMileage']}'), nextDate: json['nextDate'] == null ? null : DateTime.tryParse('${json['nextDate']}'));
 }
 
 class Part {
@@ -126,24 +74,8 @@ class Part {
   final String? url;
   final String? oem;
   final List<String>? images;
-
   Map<String, dynamic> toJson() => {'id': id, 'title': title, 'brand': brand, 'model': model, 'generation': generation, 'part_name': partName, 'price': price, 'currency': currency, 'address': address, 'main_image': mainImage, 'url': url, 'oem': oem, 'images': images};
-
-  factory Part.fromJson(Map<String, dynamic> j) => Part(
-      id: (j['id'] ?? 0) as int,
-      title: '${j['title'] ?? ''}',
-      brand: '${j['brand'] ?? ''}',
-      model: '${j['model'] ?? ''}',
-      generation: '${j['generation'] ?? ''}',
-      partName: '${j['part_name'] ?? ''}',
-      price: j['price'] as num?,
-      currency: j['currency']?.toString(),
-      address: j['address']?.toString(),
-      mainImage: j['main_image']?.toString(),
-      url: j['url']?.toString(),
-      oem: j['oem']?.toString(),
-      images: (j['images'] as List?)?.map((e) => '$e').toList());
-
+  factory Part.fromJson(Map<String, dynamic> j) => Part(id: (j['id'] ?? 0) as int, title: '${j['title'] ?? ''}', brand: '${j['brand'] ?? ''}', model: '${j['model'] ?? ''}', generation: '${j['generation'] ?? ''}', partName: '${j['part_name'] ?? ''}', price: j['price'] as num?, currency: j['currency']?.toString(), address: j['address']?.toString(), mainImage: j['main_image']?.toString(), url: j['url']?.toString(), oem: j['oem']?.toString(), images: (j['images'] as List?)?.map((e) => '$e').toList());
   static String encodeList(List<Part> list) => jsonEncode(list.map((e) => e.toJson()).toList());
   static List<Part> decodeList(String raw) => (jsonDecode(raw) as List).map((e) => Part.fromJson(Map<String, dynamic>.from(e))).toList();
 }
@@ -161,4 +93,16 @@ class AppRequest {
   final String status;
   Map<String, dynamic> toJson() => {'id': id, 'requestId': requestId, 'name': name, 'phone': phone, 'partName': partName, 'brand': brand, 'model': model, 'createdAt': createdAt.toIso8601String(), 'status': status};
   factory AppRequest.fromJson(Map<dynamic, dynamic> j) => AppRequest(id: '${j['id']}', requestId: j['requestId']?.toString(), name: '${j['name']}', phone: '${j['phone']}', partName: '${j['partName']}', brand: '${j['brand']}', model: '${j['model']}', createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(), status: '${j['status'] ?? 'отправлена'}');
+}
+
+class OrderHistoryItem {
+  OrderHistoryItem({required this.id, required this.createdAt, required this.total, required this.currency, required this.itemsCount, required this.status});
+  final String id;
+  final DateTime createdAt;
+  final double total;
+  final String currency;
+  final int itemsCount;
+  final String status;
+  Map<String, dynamic> toJson() => {'id': id, 'createdAt': createdAt.toIso8601String(), 'total': total, 'currency': currency, 'itemsCount': itemsCount, 'status': status};
+  factory OrderHistoryItem.fromJson(Map<dynamic, dynamic> j) => OrderHistoryItem(id: '${j['id']}', createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(), total: double.tryParse('${j['total'] ?? 0}') ?? 0, currency: '${j['currency'] ?? 'USD'}', itemsCount: int.tryParse('${j['itemsCount'] ?? 0}') ?? 0, status: '${j['status'] ?? 'отправлен'}');
 }

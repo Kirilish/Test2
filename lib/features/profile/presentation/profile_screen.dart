@@ -31,7 +31,7 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               Expanded(child: _metric(context, 'Избранное', '${favorites.length}', Icons.favorite_outline, '/favorites')),
               Expanded(child: _metric(context, 'Корзина', '${cart.length}', Icons.shopping_cart_outlined, '/cart')),
-              Expanded(child: _metric(context, 'Заявки', '${requests.length}', Icons.assignment_outlined, null)),
+              Expanded(child: _metric(context, 'Заказы', '${ref.read(localRepoProvider).getOrders().length}', Icons.receipt_long_outlined, '/orders')),
             ],
           ),
           const SizedBox(height: 8),

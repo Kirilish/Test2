@@ -84,6 +84,37 @@ app.post('/api/ai/chat', async (req, res) => {
   }
 });
 
+
+app.post('/api/orders/telegram', async (req, res) => {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) {
+      return res.status(500).json({ error: 'missing_telegram_config' });
+    }
+
+    const { total, items } = req.body || {};
+    const lines = (items || []).map((x) => {
+      const p = x.part || {};
+      return `• ${p.title || '-'} x${x.quantity || 1} (${p.price || '-'} ${p.currency || ''})`;
+    });
+    const text = `Новый заказ из приложения Zapshop Garage
+Итого: ${total || 0} USD
+${lines.join('
+')}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'telegram_send_error', details: e?.message || 'unknown_error' });
+  }
+});
+
 app.get('/health', (_, res) => {
   res.json({ ok: true });
 });
