@@ -78,6 +78,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   final scroll = ScrollController();
   bool onlyActiveCar = false;
   String selectedCategory = '';
+  String sortMode = 'new';
   final categories = const ['Двигатель','Коробка','Фара','Бампер','Дверь','Капот','Крыло','Зеркало','Радиатор','Турбина'];
 
   @override
@@ -132,6 +133,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 },
               ),
             ),
+            const SizedBox(height: 8),
+            Row(children: [
+              ChoiceChip(label: const Text('Новые'), selected: sortMode == 'new', onSelected: (_) async { setState(() => sortMode = 'new'); await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')); }),
+              const SizedBox(width: 8),
+              ChoiceChip(label: const Text('Дешевле'), selected: sortMode == 'cheap', onSelected: (_) async { setState(() => sortMode = 'cheap'); await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')); }),
+            ]),
             Row(children: [
               Expanded(
                 child: SwitchListTile.adaptive(
@@ -169,12 +176,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ? const Center(child: CircularProgressIndicator())
               : st.items.isEmpty
                   ? const Center(child: Text('Запчасти не найдены'))
-                  : ListView.builder(
+                  : RefreshIndicator(
+                      onRefresh: () => ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')),
+                      child: ListView.builder(
                       controller: scroll,
                       itemCount: st.items.length + (st.loading ? 1 : 0),
                       itemBuilder: (_, i) {
                         if (i >= st.items.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-                        final p = st.items[i];
+                        final sorted = [...st.items];
+                        if (sortMode == 'cheap') {
+                          sorted.sort((a,b) => (a.price ?? 1e12).compareTo(b.price ?? 1e12));
+                        }
+                        final p = sorted[i];
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           elevation: 2,
@@ -214,6 +227,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         );
                       },
                     ),
+                    )
         )
       ]),
     );
