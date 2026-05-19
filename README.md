@@ -1,25 +1,26 @@
 # Zapshop Garage MVP
 
-Полноценный MVP Flutter-приложения для Android/iOS: гараж авто, история обслуживания, маркет запчастей Zapshop, избранное, корзина, заявки и AI-помощник с mock backend proxy интерфейсом.
+Flutter MVP-приложение Zapshop Garage: гараж, история обслуживания, маркет запчастей Zapshop, избранное/корзина/заявки и AI-помощник.
 
-## Запуск
-1. Установите Flutter SDK (3.3+).
-2. Выполните:
+## Установка и запуск
+1. Установите Flutter SDK (stable 3.3+).
+2. Откройте проект в VS Code.
+3. Выполните:
    ```bash
    flutter pub get
    flutter run
    ```
 
-## API Zapshop
-Base URL: `https://zapshop.by/wp-json/pmm/v1` в `lib/features/market/data/zapshop_api_client.dart`.
+## Маркет API (реальный)
+Base URL: `https://zapshop.by/wp-json/pmm/v1`
 
 Используемые endpoints:
-- `GET /parts`
+- `GET /parts` (основной список, например `https://zapshop.by/wp-json/pmm/v1/parts?page=1&per_page=20`)
 - `GET /parts/match-car`
 - `GET /parts/{id}`
 - `POST /requests`
 
-## Что реализовано
+## Реализовано
 - Нижняя навигация: Главная / Гараж / Маркет / AI / Профиль.
 - Hive-локальное хранение:
   - cars
@@ -28,38 +29,34 @@ Base URL: `https://zapshop.by/wp-json/pmm/v1` в `lib/features/market/data/zapsh
   - cart
   - requests
   - profile
-- Гараж:
-  - добавление/редактирование/удаление авто
-  - выбор активного авто
-- История обслуживания:
-  - добавление записей ремонта/обслуживания
-  - расчёт расходов по авто на главной
+- Гараж: добавление/редактирование/удаление авто, выбор активного авто.
+- История обслуживания: добавление записи и учет расходов по авто.
 - Маркет:
-  - реальные API-запросы
+  - загрузка реальных товаров из `/parts`
   - поиск
   - infinite scroll
-  - loading/error/empty
-  - карточки товаров
-  - карточка товара (детали + оформление заявки)
-  - добавление в избранное/корзину
-- Заявки:
-  - отправка через `POST /requests`
-  - локальное сохранение «Мои заявки»
-- AI:
-  - слой `AiService`
-  - `MockAiService` с правилами (VIN/OEM, риски б/у, без 100% fit обещаний)
+  - фильтр «Запчасти под мое авто» через `/parts/match-car`
+  - карточка товара через `/parts/{id}`
+  - добавление в избранное и корзину
+  - отправка заявки через `/requests`
+  - loading / error / empty состояния + retry
+- AI-помощник:
+  - архитектурный интерфейс `AiService`
+  - `MockAiService` для работы без backend
+  - безопасные ответы без обещаний 100% совместимости без VIN/OEM
+  - архитектура готова для backend proxy
 
-## AI Proxy (как заменить mock)
-Сейчас используется `MockAiService` в `lib/features/ai/presentation/ai_screen.dart`.
+## ChatGPT/AI backend proxy
+Важно: OpenAI API key нельзя хранить в мобильном приложении.
 
-Переход на реальный backend:
-1. Реализовать `BackendAiService` с запросом `POST /api/ai/chat`.
-2. Вынести в `features/ai/data` и внедрять через provider.
-3. На сервере вызывать OpenAI Responses API.
-4. Не хранить OpenAI ключ в мобильном приложении.
+Как подключить real ChatGPT:
+1. Реализовать backend endpoint `POST /api/ai/chat`.
+2. На backend вызывать OpenAI Responses API.
+3. В мобильном приложении использовать `BackendAiProxyService` (уже подготовлен контракт).
+4. Для фото-анализа запчасти отправлять изображение в backend proxy (base64/multipart), а не в OpenAI напрямую из приложения.
 
-## Что можно доработать
-- Отдельные экраны: избранное, корзина, мои заявки, авто из США, калькулятор ремонта (сейчас доступно через текущие разделы и данные профиля/маркета).
-- Более глубокие фильтры и сортировка маркета.
-- Синхронизация статусов заявок с серверным API (когда появится).
-- Тесты widget/integration и CI pipeline.
+## Что еще можно улучшить
+- Выделить AI-фичу по слоям `data/domain/presentation` в отдельные файлы.
+- Добавить отдельные экраны Избранное / Корзина / Мои заявки.
+- Добавить авто-термины USA import и калькулятор ремонта как отдельные разделы.
+- Добавить widget/integration тесты и CI.

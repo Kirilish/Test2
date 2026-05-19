@@ -5,21 +5,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models.dart';
-import '../../../core/storage.dart';
 import '../../../core/providers.dart';
+import '../../garage/presentation/garage_screen.dart';
 import '../data/zapshop_api_client.dart';
 
 final apiProvider = Provider((ref) => ZapshopApiClient());
 
 class MarketState {
-  const MarketState({this.items = const [], this.page = 1, this.loading = false, this.hasMore = true, this.error});
+  const MarketState({this.items = const [], this.page = 1, this.loading = false, this.initialLoading = false, this.hasMore = true, this.error});
   final List<Part> items;
   final int page;
   final bool loading;
+  final bool initialLoading;
   final bool hasMore;
   final String? error;
-  MarketState copyWith({List<Part>? items, int? page, bool? loading, bool? hasMore, String? error}) =>
-      MarketState(items: items ?? this.items, page: page ?? this.page, loading: loading ?? this.loading, hasMore: hasMore ?? this.hasMore, error: error);
+  MarketState copyWith({List<Part>? items, int? page, bool? loading, bool? initialLoading, bool? hasMore, String? error}) => MarketState(
+        items: items ?? this.items,
+        page: page ?? this.page,
+        loading: loading ?? this.loading,
+        initialLoading: initialLoading ?? this.initialLoading,
+        hasMore: hasMore ?? this.hasMore,
+        error: error,
+      );
 }
 
 class MarketNotifier extends StateNotifier<MarketState> {
@@ -29,18 +36,28 @@ class MarketNotifier extends StateNotifier<MarketState> {
 
   Future<void> refresh({String search = ''}) async {
     _search = search;
-    state = state.copyWith(loading: true, page: 1, items: [], hasMore: true, error: null);
-    await loadMore();
+    state = state.copyWith(initialLoading: true, loading: false, page: 1, items: [], hasMore: true, error: null);
+    await _loadPage(reset: true);
   }
 
-  Future<void> loadMore() async {
-    if (state.loading || !state.hasMore) return;
+  Future<void> loadMore() => _loadPage(reset: false);
+
+  Future<void> _loadPage({required bool reset}) async {
+    if (state.loading || (!state.hasMore && !reset)) return;
     state = state.copyWith(loading: true, error: null);
     try {
-      final data = await _api.getParts(page: state.page, perPage: 20, search: _search);
-      state = state.copyWith(items: [...state.items, ...data], page: state.page + 1, hasMore: data.length == 20, loading: false);
+      final targetPage = reset ? 1 : state.page;
+      final data = await _api.getParts(page: targetPage, perPage: 20, search: _search);
+      state = state.copyWith(
+        items: reset ? data : [...state.items, ...data],
+        page: targetPage + 1,
+        hasMore: data.length == 20,
+        loading: false,
+        initialLoading: false,
+        error: null,
+      );
     } catch (e) {
-      state = state.copyWith(loading: false, error: '$e');
+      state = state.copyWith(loading: false, initialLoading: false, error: '$e');
     }
   }
 
@@ -59,6 +76,7 @@ class MarketScreen extends ConsumerStatefulWidget {
 class _MarketScreenState extends ConsumerState<MarketScreen> {
   final c = TextEditingController();
   final scroll = ScrollController();
+  bool onlyActiveCar = false;
 
   @override
   void initState() {
@@ -73,22 +91,61 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   @override
   Widget build(BuildContext context) {
     final st = ref.watch(marketProvider);
+    final cars = ref.watch(carsProvider);
+    final activeId = ref.watch(activeCarProvider);
+    final activeCar = cars.where((e) => e.id == activeId).cast<Car?>().firstOrNull ?? (cars.isNotEmpty ? cars.first : null);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Маркет Zapshop')),
       body: Column(children: [
-        Padding(
+        Container(
+          margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            Expanded(child: TextField(controller: c, decoration: const InputDecoration(hintText: 'Поиск детали'))),
-            IconButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), icon: const Icon(Icons.search)),
+          decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
+          child: Column(children: [
+            Row(children: [
+              Expanded(child: TextField(controller: c, decoration: const InputDecoration(hintText: 'Поиск детали', border: OutlineInputBorder()))),
+              const SizedBox(width: 8),
+              IconButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), icon: const Icon(Icons.search)),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: onlyActiveCar,
+                  title: const Text('Запчасти под мое авто'),
+                  onChanged: (v) async {
+                    setState(() => onlyActiveCar = v);
+                    if (v && activeCar != null && activeCar.brand.isNotEmpty && activeCar.model.isNotEmpty) {
+                      final data = await ref.read(marketProvider.notifier).loadForCar(activeCar);
+                      ref.read(marketProvider.notifier).state = MarketState(items: data, page: 2, hasMore: false, loading: false, initialLoading: false);
+                    } else {
+                      await ref.read(marketProvider.notifier).refresh(search: c.text);
+                    }
+                  },
+                ),
+              )
+            ])
           ]),
         ),
-        if (st.error != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Row(children: [Expanded(child: Text('Ошибка сети: ${st.error}', maxLines: 2)), TextButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), child: const Text('Retry'))])),
+        if (st.error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Card(
+              color: Colors.red.withOpacity(0.15),
+              child: ListTile(
+                title: const Text('Ошибка загрузки'),
+                subtitle: Text(st.error!),
+                trailing: TextButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), child: const Text('Retry')),
+              ),
+            ),
+          ),
         Expanded(
-          child: st.items.isEmpty && st.loading
+          child: st.items.isEmpty && st.initialLoading
               ? const Center(child: CircularProgressIndicator())
               : st.items.isEmpty
-                  ? const Center(child: Text('Список пуст'))
+                  ? const Center(child: Text('Запчасти не найдены'))
                   : ListView.builder(
                       controller: scroll,
                       itemCount: st.items.length + (st.loading ? 1 : 0),
@@ -97,78 +154,96 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         final p = st.items[i];
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          elevation: 2,
                           child: Padding(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(10),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                SizedBox(
-                                  width: 90,
-                                  height: 90,
-                                  child: p.mainImage == null || p.mainImage!.isEmpty ? const Icon(Icons.image_not_supported) : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: SizedBox(
+                                    width: 100,
+                                    height: 100,
+                                    child: p.mainImage == null || p.mainImage!.isEmpty
+                                        ? Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported))
+                                        : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover),
+                                  ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.title, maxLines: 2), Text('${p.brand} ${p.model} ${p.generation}'), Text(p.price == null ? 'Цена по запросу' : '${p.price} ${p.currency ?? ''}')]))
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 4),
+                                    Text('${p.brand} ${p.model} ${p.generation}'),
+                                    const SizedBox(height: 4),
+                                    Text(p.price == null ? 'Цена по запросу' : '${p.price} ${p.currency ?? ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ]),
+                                )
                               ]),
-                              Wrap(spacing: 6, children: [
-                                OutlinedButton(onPressed: () => _openDetail(context, p), child: const Text('Подробнее')),
+                              const SizedBox(height: 8),
+                              Wrap(spacing: 6, runSpacing: 6, children: [
+                                FilledButton.tonal(onPressed: () => _openDetail(context, p), child: const Text('Подробнее')),
                                 OutlinedButton(onPressed: () => ref.read(localRepoProvider).toggleFavorite(p), child: const Text('В избранное')),
                                 OutlinedButton(onPressed: () => ref.read(localRepoProvider).addToCart(p), child: const Text('В корзину')),
-                                OutlinedButton(onPressed: () => _askAi(context, p), child: const Text('Спросить AI')),
                               ])
                             ]),
                           ),
                         );
-                      }),
+                      },
+                    ),
         )
       ]),
     );
   }
 
-  void _askAi(BuildContext context, Part p) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI: по "${p.partName}" сверяйте VIN/OEM перед покупкой.')));
-  }
-
   Future<void> _openDetail(BuildContext context, Part p) async {
     final api = ref.read(apiProvider);
     showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => FutureBuilder<Part>(
-            future: api.getPartDetails(p.id),
-            builder: (_, s) {
-              if (s.connectionState != ConnectionState.done) return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
-              if (s.hasError || s.data == null) return const SizedBox(height: 300, child: Center(child: Text('Ошибка загрузки карточки')));
-              final d = s.data!;
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(d.title, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text('Совместимость не подтверждена. Отправьте VIN/OEM для проверки.'),
-                  const SizedBox(height: 8),
-                  Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
-                  Text('Адрес: ${d.address ?? '-'}'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                      onPressed: () async {
-                        final ok = await _sendRequest(d);
-                        if (mounted) Navigator.pop(context);
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заявка отправлена' : 'Ошибка отправки заявки')));
-                      },
-                      child: const Text('Оформить заявку')),
-                ]),
-              );
-            }));
+      context: context,
+      isScrollControlled: true,
+      builder: (dialogContext) => FutureBuilder<Part>(
+        future: api.getPartDetails(p.id),
+        builder: (_, s) {
+          if (s.connectionState != ConnectionState.done) return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
+          if (s.hasError || s.data == null) return const SizedBox(height: 300, child: Center(child: Text('Ошибка загрузки карточки')));
+          final d = s.data!;
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(d.title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              const Text('Совместимость не подтверждена. Отправьте VIN/OEM для проверки.'),
+              const SizedBox(height: 8),
+              Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
+              Text('Адрес: ${d.address ?? '-'}'),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () async {
+                  final ok = await _sendRequest(d);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заявка отправлена' : 'Ошибка отправки заявки')));
+                },
+                child: const Text('Оформить заявку'),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
   }
 
   Future<bool> _sendRequest(Part p) async {
     try {
       final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
-      await ref.read(apiProvider).createRequest({'name': 'Mobile User', 'phone': '+000000', 'brand': p.brand, 'model': p.model, 'part_name': p.partName, 'comment': 'Заказ из корзины', 'source': 'mobile_app'});
+      await ref.read(apiProvider).createRequest({'name': 'Mobile User', 'phone': '+000000', 'brand': p.brand, 'model': p.model, 'part_name': p.partName, 'comment': 'Заказ из приложения', 'source': 'mobile_app'});
       await ref.read(localRepoProvider).saveRequest(AppRequest(id: requestId, requestId: null, name: 'Mobile User', phone: '+000000', partName: p.partName, brand: p.brand, model: p.model, createdAt: DateTime.now(), status: 'отправлена'));
       return true;
     } catch (_) {
       return false;
     }
   }
+}
+
+extension _IterableX<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
