@@ -17,41 +17,56 @@ class GarageScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cars = ref.watch(carsProvider);
     final activeId = ref.watch(activeCarProvider);
+    final services = ref.watch(servicesProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Гараж')),
-      floatingActionButton: FloatingActionButton(onPressed: () => _upsertCar(context, ref), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(onPressed: () => _upsertCar(context, ref), icon: const Icon(Icons.add), label: const Text('Добавить авто')),
       body: cars.isEmpty
           ? const Center(child: Text('Добавьте автомобиль'))
           : ListView(
-              children: cars
-                  .map((c) => Card(
-                        child: ListTile(
-                          title: Text(c.title),
-                          subtitle: Text('VIN: ${c.vin} • Пробег: ${c.mileage} км • ${c.status}'),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (v) async {
-                              if (v == 'active') ref.read(activeCarProvider.notifier).state = c.id;
-                              if (v == 'edit') _upsertCar(context, ref, car: c);
-                              if (v == 'delete') {
-                                await ref.read(localRepoProvider).deleteCar(c.id);
-                                ref.read(carsProvider.notifier).state = ref.read(localRepoProvider).getCars();
-                              }
-                              if (v == 'service') _addService(context, ref, c);
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'active', child: Text('Сделать активным')),
-                              PopupMenuItem(value: 'edit', child: Text('Редактировать')),
-                              PopupMenuItem(value: 'service', child: Text('Добавить ремонт')),
-                              PopupMenuItem(value: 'delete', child: Text('Удалить')),
-                            ],
-                          ),
-                          leading: Icon(activeId == c.id ? Icons.check_circle : Icons.directions_car),
+              padding: const EdgeInsets.only(bottom: 88),
+              children: cars.map((c) {
+                final carServices = services.where((e) => e.carId == c.id).toList();
+                final spent = carServices.fold<double>(0, (p, e) => p + e.price);
+                return Card(
+                  child: ExpansionTile(
+                    leading: Icon(activeId == c.id ? Icons.check_circle : Icons.directions_car),
+                    title: Text(c.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text('VIN: ${c.vin.isEmpty ? '-' : c.vin} • ${c.mileage} км • ${c.status}'),
+                    childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    children: [
+                      Row(children: [
+                        Expanded(child: _smallInfo('Обслуживаний', '${carServices.length}')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _smallInfo('Расходы', '${spent.toStringAsFixed(2)} USD')),
+                      ]),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        FilledButton.tonal(onPressed: () => ref.read(activeCarProvider.notifier).state = c.id, child: const Text('Сделать активным')),
+                        OutlinedButton(onPressed: () => _upsertCar(context, ref, car: c), child: const Text('Редактировать')),
+                        OutlinedButton(onPressed: () => _addService(context, ref, c), child: const Text('Добавить ремонт')),
+                        OutlinedButton(
+                          onPressed: () async {
+                            await ref.read(localRepoProvider).deleteCar(c.id);
+                            ref.read(carsProvider.notifier).state = ref.read(localRepoProvider).getCars();
+                          },
+                          child: const Text('Удалить'),
                         ),
-                      ))
-                  .toList(),
+                      ]),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
     );
   }
+
+  Widget _smallInfo(String t, String v) => Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t, style: const TextStyle(fontSize: 12)), const SizedBox(height: 4), Text(v, style: const TextStyle(fontWeight: FontWeight.w700))]),
+      );
 
   void _upsertCar(BuildContext context, WidgetRef ref, {Car? car}) {
     final vin = TextEditingController(text: car?.vin ?? '');
@@ -81,33 +96,28 @@ class GarageScreen extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Отмена')),
           ElevatedButton(
             onPressed: () async {
-              try {
-                final item = Car(
-                  id: car?.id ?? 'car_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999)}',
-                  vin: vin.text.trim(),
-                  brand: brand.text.trim(),
-                  model: model.text.trim(),
-                  generation: generation.text.trim(),
-                  year: year.text.trim(),
-                  engine: car?.engine ?? '',
-                  engineCode: car?.engineCode ?? '',
-                  transmission: car?.transmission ?? '',
-                  drive: car?.drive ?? '',
-                  fuel: car?.fuel ?? '',
-                  mileage: int.tryParse(mileage.text.trim()) ?? 0,
-                  country: car?.country ?? '',
-                  isUsaImport: car?.isUsaImport ?? false,
-                  status: car?.status ?? 'на ходу',
-                  comment: car?.comment ?? '',
-                );
-                await ref.read(localRepoProvider).saveCar(item);
-                ref.read(carsProvider.notifier).state = ref.read(localRepoProvider).getCars();
-                if (!dialogContext.mounted) return;
-                Navigator.of(dialogContext).pop();
-              } catch (e) {
-                if (!dialogContext.mounted) return;
-                ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('Ошибка сохранения авто: $e')));
-              }
+              final item = Car(
+                id: car?.id ?? 'car_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999)}',
+                vin: vin.text.trim(),
+                brand: brand.text.trim(),
+                model: model.text.trim(),
+                generation: generation.text.trim(),
+                year: year.text.trim(),
+                engine: car?.engine ?? '',
+                engineCode: car?.engineCode ?? '',
+                transmission: car?.transmission ?? '',
+                drive: car?.drive ?? '',
+                fuel: car?.fuel ?? '',
+                mileage: int.tryParse(mileage.text.trim()) ?? 0,
+                country: car?.country ?? '',
+                isUsaImport: car?.isUsaImport ?? false,
+                status: car?.status ?? 'на ходу',
+                comment: car?.comment ?? '',
+              );
+              await ref.read(localRepoProvider).saveCar(item);
+              ref.read(carsProvider.notifier).state = ref.read(localRepoProvider).getCars();
+              if (!dialogContext.mounted) return;
+              Navigator.of(dialogContext).pop();
             },
             child: const Text('Сохранить'),
           ),
