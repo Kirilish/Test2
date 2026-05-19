@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/ai/presentation/ai_screen.dart';
+import '../features/cart/presentation/cart_screen.dart';
+import '../features/favorites/presentation/favorites_screen.dart';
+import '../features/garage/presentation/garage_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/market/presentation/market_screen.dart';
-import '../features/garage/presentation/garage_screen.dart';
-import '../features/ai/presentation/ai_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 
 final appRouter = GoRouter(
@@ -19,6 +21,8 @@ final appRouter = GoRouter(
         GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       ],
     ),
+    GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
+    GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
   ],
 );
 

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/models.dart';
 import '../../../core/providers.dart';
@@ -99,7 +100,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final activeCar = cars.where((e) => e.id == activeId).cast<Car?>().firstOrNull ?? (cars.isNotEmpty ? cars.first : null);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Маркет Zapshop')),
+      appBar: AppBar(title: const Text('Маркет Zapshop'), actions: [IconButton(onPressed: ()=>context.push('/favorites'), icon: const Icon(Icons.favorite_border)), IconButton(onPressed: ()=>context.push('/cart'), icon: const Icon(Icons.shopping_cart_outlined))]),
       body: Column(children: [
         Container(
           margin: const EdgeInsets.all(12),
@@ -150,6 +151,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     if (v && activeCar != null && activeCar.brand.isNotEmpty && activeCar.model.isNotEmpty) {
                       final data = await ref.read(marketProvider.notifier).loadForCar(activeCar);
                       ref.read(marketProvider.notifier).state = MarketState(items: data, page: 2, hasMore: false, loading: false, initialLoading: false);
+                      if (context.mounted && data.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('По точному фильтру пусто. Показаны fallback результаты/поиск.')));
+                      }
                     } else {
                       await ref.read(marketProvider.notifier).refresh(search: c.text);
                     }

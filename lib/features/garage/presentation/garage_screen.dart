@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models.dart';
@@ -76,6 +77,8 @@ class GarageScreen extends ConsumerWidget {
     final generation = TextEditingController(text: car?.generation ?? '');
     final year = TextEditingController(text: car?.year ?? '');
     final mileage = TextEditingController(text: '${car?.mileage ?? 0}');
+    String photoPath = car?.photoPath ?? '';
+    final picker = ImagePicker();
 
     showDialog<void>(
       context: context,
@@ -118,6 +121,12 @@ class GarageScreen extends ConsumerWidget {
               TextField(controller: generation, decoration: const InputDecoration(labelText: 'Поколение')),
               TextField(controller: year, decoration: const InputDecoration(labelText: 'Год')),
               TextField(controller: mileage, decoration: const InputDecoration(labelText: 'Пробег')),
+              const SizedBox(height: 8),
+              Row(children: [
+                OutlinedButton.icon(onPressed: () async { final x = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80); if (x != null) { photoPath = x.path; } }, icon: const Icon(Icons.photo), label: const Text('Фото авто')),
+                const SizedBox(width: 8),
+                Expanded(child: Text(photoPath.isEmpty ? 'Фото не выбрано' : 'Фото выбрано', maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ]),
             ],
           ),
         ),
@@ -142,6 +151,7 @@ class GarageScreen extends ConsumerWidget {
                 isUsaImport: car?.isUsaImport ?? false,
                 status: car?.status ?? 'на ходу',
                 comment: car?.comment ?? '',
+                photoPath: photoPath,
               );
               await ref.read(localRepoProvider).saveCar(item);
               ref.read(carsProvider.notifier).state = ref.read(localRepoProvider).getCars();
@@ -227,6 +237,12 @@ class GarageScreen extends ConsumerWidget {
                 ),
                 TextField(controller: title, decoration: const InputDecoration(labelText: 'Название')),
                 TextField(controller: mileage, decoration: const InputDecoration(labelText: 'Пробег')),
+              const SizedBox(height: 8),
+              Row(children: [
+                OutlinedButton.icon(onPressed: () async { final x = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80); if (x != null) { photoPath = x.path; } }, icon: const Icon(Icons.photo), label: const Text('Фото авто')),
+                const SizedBox(width: 8),
+                Expanded(child: Text(photoPath.isEmpty ? 'Фото не выбрано' : 'Фото выбрано', maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ]),
                 TextField(controller: price, decoration: const InputDecoration(labelText: 'Цена')),
                 TextField(controller: nextMileage, decoration: const InputDecoration(labelText: 'След. замена (пробег)')),
                 TextField(controller: nextDays, decoration: const InputDecoration(labelText: 'След. замена (через дней)')),

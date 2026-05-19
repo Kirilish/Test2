@@ -26,10 +26,21 @@ class ZapshopApiClient {
   }
 
   Future<List<Part>> matchCar({required String brand, required String model, String? generation}) async {
-    final res = await _dio.get('/parts/match-car', queryParameters: {'brand': brand, 'model': model, if (generation != null) 'generation': generation});
-    final data = res.data as Map<String, dynamic>;
-    final items = (data['items'] as List<dynamic>? ?? []);
-    return items.map((e) => Part.fromJson(e as Map<String, dynamic>)).toList();
+    Future<List<Part>> run(Map<String, dynamic> q) async {
+      final res = await _dio.get('/parts/match-car', queryParameters: q);
+      final data = res.data as Map<String, dynamic>;
+      final items = (data['items'] as List<dynamic>? ?? []);
+      return items.map((e) => Part.fromJson(e as Map<String, dynamic>)).toList();
+    }
+
+    final base = {'brand': brand, 'model': model, if (generation != null && generation.isNotEmpty) 'generation': generation};
+    var list = await run(base);
+    if (list.isNotEmpty) return list;
+
+    list = await run({'brand': brand, 'model': model});
+    if (list.isNotEmpty) return list;
+
+    return getParts(search: '$brand $model ${generation ?? ''}'.trim(), perPage: 40);
   }
 
   Future<Part> getPartDetails(int id) async {

@@ -18,6 +18,7 @@ class Car {
     required this.isUsaImport,
     required this.status,
     required this.comment,
+    this.photoPath = '',
   });
 
   final String id;
@@ -36,6 +37,7 @@ class Car {
   final bool isUsaImport;
   final String status;
   final String comment;
+  final String photoPath;
 
   String get title => '$brand $model $year'.trim();
 
@@ -56,6 +58,7 @@ class Car {
         'isUsaImport': isUsaImport,
         'status': status,
         'comment': comment,
+        'photoPath': photoPath,
       };
 
   factory Car.fromJson(Map<dynamic, dynamic> json) => Car(
@@ -75,6 +78,7 @@ class Car {
         isUsaImport: json['isUsaImport'] == true,
         status: '${json['status'] ?? 'на ходу'}',
         comment: '${json['comment'] ?? ''}',
+        photoPath: '${json['photoPath'] ?? ''}',
       );
 }
 
@@ -89,6 +93,7 @@ class ServiceRecord {
   final double price;
   final String currency;
   final String comment;
+  final String photoPath;
   final int? nextMileage;
   final DateTime? nextDate;
 
