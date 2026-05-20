@@ -28,6 +28,7 @@ class LocalStorage {
 }
 
 class LocalRepo {
+  static const recentPartsKey = 'recent_parts';
   List<Car> getCars() => LocalStorage.getBox(LocalStorage.carsBox).values.map((e) => Car.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
   Future<void> saveCar(Car car) => LocalStorage.getBox(LocalStorage.carsBox).put(car.id, car.toJson());
   Future<void> deleteCar(String id) => LocalStorage.getBox(LocalStorage.carsBox).delete(id);
@@ -62,5 +63,19 @@ class LocalRepo {
   List<OrderHistoryItem> getOrders() => LocalStorage.getBox(LocalStorage.ordersBox).values.map((e) => OrderHistoryItem.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
   Future<void> saveOrder(OrderHistoryItem o) => LocalStorage.getBox(LocalStorage.ordersBox).put(o.id, o.toJson());
   Future<void> clearCart() => LocalStorage.getBox(LocalStorage.cartBox).clear();
+
+  List<Part> getRecentParts() {
+    final raw = LocalStorage.getBox(LocalStorage.profileBox).get(recentPartsKey);
+    if (raw is! String || raw.isEmpty) return [];
+    return Part.decodeList(raw);
+  }
+
+  Future<void> saveRecentPart(Part p) async {
+    final list = getRecentParts();
+    list.removeWhere((x) => x.id == p.id);
+    list.insert(0, p);
+    final cut = list.take(10).toList();
+    await LocalStorage.getBox(LocalStorage.profileBox).put(recentPartsKey, Part.encodeList(cut));
+  }
 }
 

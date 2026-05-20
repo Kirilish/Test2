@@ -163,6 +163,43 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ])
           ]),
         ),
+
+        Builder(builder: (_) {
+          final recent = ref.read(localRepoProvider).getRecentParts();
+          if (recent.isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Недавно просмотренные', style: TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: recent.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final rp = recent[i];
+                    return InkWell(
+                      onTap: () => _openDetail(context, rp),
+                      child: Container(
+                        width: 220,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(12)),
+                        child: Row(children: [
+                          SizedBox(width: 60, height: 60, child: rp.mainImage == null ? const Icon(Icons.image) : CachedNetworkImage(imageUrl: rp.mainImage!, fit: BoxFit.cover)),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(rp.title, maxLines: 3, overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ]),
+          );
+        }),
         if (st.error != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -248,6 +285,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           if (s.connectionState != ConnectionState.done) return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
           if (s.hasError || s.data == null) return const SizedBox(height: 300, child: Center(child: Text('Ошибка загрузки карточки')));
           final d = s.data!;
+          ref.read(localRepoProvider).saveRecentPart(d);
           final images = (d.images != null && d.images!.isNotEmpty) ? d.images! : (d.mainImage == null ? <String>[] : [d.mainImage!]);
           return Padding(
             padding: const EdgeInsets.all(16),
