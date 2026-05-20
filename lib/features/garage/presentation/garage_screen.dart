@@ -613,9 +613,16 @@ class GarageScreen extends ConsumerWidget {
         prettySummary: prettySummary.isEmpty ? null : prettySummary,
       );
     } on DioException catch (e) {
-      final msg = e.type == DioExceptionType.connectionError
-          ? 'Нет сети или VIN API долго отвечает. Проверьте интернет/VPN и попробуйте снова.'
-          : 'Ошибка запроса VIN API: ${e.message}';
+      final msg = switch (e.type) {
+        DioExceptionType.connectionError ||
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.receiveTimeout ||
+        DioExceptionType.sendTimeout =>
+          'Нет соединения с VIN API или сервер долго отвечает. Проверьте интернет/VPN и попробуйте снова.',
+        DioExceptionType.badResponse =>
+          'VIN API вернул ошибку HTTP ${e.response?.statusCode ?? '-'}',
+        _ => 'Ошибка запроса VIN API: ${e.message}',
+      };
       return _VinDecodedResult(
         ok: false,
         errorText: msg,

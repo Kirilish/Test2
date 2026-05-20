@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:zapshop_garage/core/platform_file_image.dart';
 import 'package:zapshop_garage/features/garage/presentation/garage_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -52,8 +51,8 @@ class HomeScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 180,
                       width: double.infinity,
-                      child: Image.file(
-                        File(car.photoPath),
+                      child: Image(
+                        image: platformFileImage(car.photoPath),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: const Color(0xFF1E293B),
