@@ -20,14 +20,8 @@ class MarketState {
   final bool initialLoading;
   final bool hasMore;
   final String? error;
-  MarketState copyWith({List<Part>? items, int? page, bool? loading, bool? initialLoading, bool? hasMore, String? error}) => MarketState(
-        items: items ?? this.items,
-        page: page ?? this.page,
-        loading: loading ?? this.loading,
-        initialLoading: initialLoading ?? this.initialLoading,
-        hasMore: hasMore ?? this.hasMore,
-        error: error,
-      );
+  MarketState copyWith({List<Part>? items, int? page, bool? loading, bool? initialLoading, bool? hasMore, String? error}) =>
+      MarketState(items: items ?? this.items, page: page ?? this.page, loading: loading ?? this.loading, initialLoading: initialLoading ?? this.initialLoading, hasMore: hasMore ?? this.hasMore, error: error);
 }
 
 class MarketNotifier extends StateNotifier<MarketState> {
@@ -49,14 +43,7 @@ class MarketNotifier extends StateNotifier<MarketState> {
     try {
       final targetPage = reset ? 1 : state.page;
       final data = await _api.getParts(page: targetPage, perPage: 20, search: _search);
-      state = state.copyWith(
-        items: reset ? data : [...state.items, ...data],
-        page: targetPage + 1,
-        hasMore: data.length == 20,
-        loading: false,
-        initialLoading: false,
-        error: null,
-      );
+      state = state.copyWith(items: reset ? data : [...state.items, ...data], page: targetPage + 1, hasMore: data.length == 20, loading: false, initialLoading: false, error: null);
     } catch (e) {
       state = state.copyWith(loading: false, initialLoading: false, error: '$e');
     }
@@ -80,7 +67,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   bool onlyActiveCar = false;
   String selectedCategory = '';
   String sortMode = 'new';
-  final categories = const ['Двигатель','Коробка','Фара','Бампер','Дверь','Капот','Крыло','Зеркало','Радиатор','Турбина'];
+  final categories = const ['Двигатель', 'Коробка', 'Фара', 'Бампер', 'Дверь', 'Капот', 'Крыло', 'Зеркало', 'Радиатор', 'Турбина'];
 
   @override
   void initState() {
@@ -100,7 +87,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final activeCar = cars.where((e) => e.id == activeId).cast<Car?>().firstOrNull ?? (cars.isNotEmpty ? cars.first : null);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Маркет Zapshop'), actions: [IconButton(onPressed: ()=>context.push('/favorites'), icon: const Icon(Icons.favorite_border)), IconButton(onPressed: ()=>context.push('/cart'), icon: const Icon(Icons.shopping_cart_outlined))]),
+      appBar: AppBar(title: const Text('Маркет Zapshop'), actions: [IconButton(onPressed: () => context.push('/favorites'), icon: const Icon(Icons.favorite_border)), IconButton(onPressed: () => context.push('/cart'), icon: const Icon(Icons.shopping_cart_outlined))]),
       body: Column(children: [
         Container(
           margin: const EdgeInsets.all(12),
@@ -136,9 +123,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
             const SizedBox(height: 8),
             Row(children: [
-              ChoiceChip(label: const Text('Новые'), selected: sortMode == 'new', onSelected: (_) async { setState(() => sortMode = 'new'); await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')); }),
+              ChoiceChip(label: const Text('Новые'), selected: sortMode == 'new', onSelected: (_) async {
+                setState(() => sortMode = 'new');
+                await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' '));
+              }),
               const SizedBox(width: 8),
-              ChoiceChip(label: const Text('Дешевле'), selected: sortMode == 'cheap', onSelected: (_) async { setState(() => sortMode = 'cheap'); await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')); }),
+              ChoiceChip(label: const Text('Дешевле'), selected: sortMode == 'cheap', onSelected: (_) async {
+                setState(() => sortMode = 'cheap');
+                await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' '));
+              }),
             ]),
             Row(children: [
               Expanded(
@@ -163,7 +156,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ])
           ]),
         ),
-
         Builder(builder: (_) {
           final recent = ref.read(localRepoProvider).getRecentParts();
           if (recent.isEmpty) return const SizedBox.shrink();
@@ -205,11 +197,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Card(
               color: Colors.red.withOpacity(0.15),
-              child: ListTile(
-                title: const Text('Ошибка загрузки'),
-                subtitle: Text(st.error!),
-                trailing: TextButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), child: const Text('Retry')),
-              ),
+              child: ListTile(title: const Text('Ошибка загрузки'), subtitle: Text(st.error!), trailing: TextButton(onPressed: () => ref.read(marketProvider.notifier).refresh(search: c.text), child: const Text('Retry'))),
             ),
           ),
         Expanded(
@@ -220,55 +208,72 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   : RefreshIndicator(
                       onRefresh: () => ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')),
                       child: ListView.builder(
-                      controller: scroll,
-                      itemCount: st.items.length + (st.loading ? 1 : 0),
-                      itemBuilder: (_, i) {
-                        if (i >= st.items.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-                        final sorted = [...st.items];
-                        if (sortMode == 'cheap') {
-                          sorted.sort((a,b) => (a.price ?? 1e12).compareTo(b.price ?? 1e12));
-                        }
-                        final p = sorted[i];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 100,
-                                    height: 100,
-                                    child: p.mainImage == null || p.mainImage!.isEmpty
-                                        ? CachedNetworkImage(imageUrl: 'https://api.filesmonster.ru/gallery/original/43/car-part/6155028/28311029.jpg', fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported)))
-                                        : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    const SizedBox(height: 4),
-                                    Text('${p.brand} ${p.model} ${p.generation}'),
-                                    const SizedBox(height: 4),
-                                    Text(p.price == null ? 'Цена по запросу' : '${p.price} ${p.currency ?? ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        controller: scroll,
+                        itemCount: st.items.length + (st.loading ? 1 : 0),
+                        itemBuilder: (_, i) {
+                          if (i >= st.items.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                          final sorted = [...st.items];
+                          if (sortMode == 'cheap') sorted.sort((a, b) => (a.price ?? 1e12).compareTo(b.price ?? 1e12));
+                          final p = sorted[i];
+                          return TweenAnimationBuilder<double>(
+                            duration: Duration(milliseconds: 220 + min(i, 8) * 35),
+                            tween: Tween(begin: 0.92, end: 1),
+                            curve: Curves.easeOut,
+                            builder: (context, value, child) => Transform.scale(scale: value, child: Opacity(opacity: value, child: child)),
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              elevation: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Hero(
+                                      tag: 'part_${p.id}',
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          width: 100,
+                                          height: 100,
+                                          child: p.mainImage == null || p.mainImage!.isEmpty
+                                              ? CachedNetworkImage(imageUrl: 'https://api.filesmonster.ru/gallery/original/43/car-part/6155028/28311029.jpg', fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported)))
+                                              : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text('${p.brand} ${p.model} ${p.generation}'),
+                                        const SizedBox(height: 4),
+                                        Text(p.price == null ? 'Цена по запросу' : '${p.price} ${p.currency ?? ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      ]),
+                                    )
                                   ]),
-                                )
-                              ]),
-                              const SizedBox(height: 8),
-                              Wrap(spacing: 6, runSpacing: 6, children: [
-                                FilledButton.tonal(onPressed: () => _openDetail(context, p), child: const Text('Подробнее')),
-                                OutlinedButton(onPressed: () async { final ok = await ref.read(localRepoProvider).addFavoriteIfAbsent(p); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Добавлено в избранное' : 'Уже в избранном'))); }, child: const Text('В избранное')), 
-                                OutlinedButton(onPressed: () async { final ok = await ref.read(localRepoProvider).addToCartIfAbsent(p); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заказ добавлен в корзину' : 'Уже в корзине'))); }, child: const Text('В корзину')), 
-                              ])
-                            ]),
-                          ),
-                        );
-                      },
+                                  const SizedBox(height: 8),
+                                  Wrap(spacing: 6, runSpacing: 6, children: [
+                                    FilledButton.tonal(onPressed: () => _openDetail(context, p), child: const Text('Подробнее')),
+                                    OutlinedButton(
+                                        onPressed: () async {
+                                          final ok = await ref.read(localRepoProvider).addFavoriteIfAbsent(p);
+                                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Добавлено в избранное' : 'Уже в избранном')));
+                                        },
+                                        child: const Text('В избранное')),
+                                    OutlinedButton(
+                                        onPressed: () async {
+                                          final ok = await ref.read(localRepoProvider).addToCartIfAbsent(p);
+                                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заказ добавлен в корзину' : 'Уже в корзине')));
+                                        },
+                                        child: const Text('В корзину')),
+                                  ])
+                                ]),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    )
         )
       ]),
     );
@@ -298,9 +303,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       children: images
                           .map((u) => Padding(
                                 padding: const EdgeInsets.only(right: 6),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: CachedNetworkImage(imageUrl: u, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
+                                child: Hero(
+                                  tag: 'part_${d.id}',
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: CachedNetworkImage(imageUrl: u, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
+                                  ),
                                 ),
                               ))
                           .toList(),
@@ -311,6 +319,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 const SizedBox(height: 8),
                 Text('Марка/модель: ${d.brand} ${d.model} ${d.generation}'),
                 Text('Деталь: ${d.partName}'),
+                if (d.description != null && d.description!.isNotEmpty) Text('Описание: ${d.description}'),
                 const Text('Совместимость не подтверждена. Отправьте VIN/OEM для проверки.'),
                 const SizedBox(height: 8),
                 Text(d.price == null ? 'Цена по запросу' : '${d.price} ${d.currency ?? ''}'),
@@ -323,13 +332,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ],
                 const SizedBox(height: 8),
                 ElevatedButton(
-                onPressed: () async {
-                  final ok = await _sendRequest(d);
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заявка отправлена' : 'Ошибка отправки заявки')));
-                },
-                child: const Text('Оформить заявку'),
-              ),
+                  onPressed: () async {
+                    final ok = await _sendRequest(d);
+                    if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Заявка отправлена' : 'Ошибка отправки заявки')));
+                  },
+                  child: const Text('Оформить заявку'),
+                ),
               ]),
             ),
           );
