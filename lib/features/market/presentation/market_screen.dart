@@ -235,7 +235,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                           width: 100,
                                           height: 100,
                                           child: p.mainImage == null || p.mainImage!.isEmpty
-                                              ? CachedNetworkImage(imageUrl: 'https://api.filesmonster.ru/gallery/original/43/car-part/6155028/28311029.jpg', fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported)))
+                                              ? CachedNetworkImage(imageUrl: 'https://api.filesmonster.ru/gallery/original/43/car-part/575279/11656074.jpg', fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.image_not_supported)))
                                               : CachedNetworkImage(imageUrl: p.mainImage!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: const Color(0xFF334155), child: const Icon(Icons.broken_image))),
                                         ),
                                       ),
