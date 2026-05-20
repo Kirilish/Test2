@@ -4,12 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 
-class FavoritesScreen extends ConsumerWidget {
+class FavoritesScreen extends ConsumerStatefulWidget {
   const FavoritesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.read(localRepoProvider).getFavorites();
+  ConsumerState<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final repo = ref.read(localRepoProvider);
+    final items = repo.getFavorites();
     return Scaffold(
       appBar: AppBar(title: const Text('Избранное')),
       body: items.isEmpty
@@ -20,9 +26,25 @@ class FavoritesScreen extends ConsumerWidget {
                 final p = items[i];
                 return Card(
                   child: ListTile(
-                    leading: SizedBox(width: 60, height: 60, child: p.mainImage == null ? const Icon(Icons.image_not_supported) : CachedNetworkImage(imageUrl: p.mainImage!)),
+                    leading: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: p.mainImage == null
+                          ? const Icon(Icons.image_not_supported)
+                          : CachedNetworkImage(imageUrl: p.mainImage!),
+                    ),
                     title: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text('${p.price ?? 'Цена по запросу'} ${p.currency ?? ''}'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () async {
+                        await repo.removeFavorite(p);
+                        if (mounted) setState(() {});
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Удалено из избранного')));
+                        }
+                      },
+                    ),
                   ),
                 );
               },

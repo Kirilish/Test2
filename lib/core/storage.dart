@@ -54,6 +54,8 @@ class LocalRepo {
     return true;
   }
 
+  Future<void> removeFromCart(int partId) => LocalStorage.getBox(LocalStorage.cartBox).delete(partId);
+
   List<AppRequest> getRequests() => LocalStorage.getBox(LocalStorage.requestsBox).values.map((e) => AppRequest.fromJson(Map<dynamic, dynamic>.from(e as Map))).toList();
   Future<void> saveRequest(AppRequest r) => LocalStorage.getBox(LocalStorage.requestsBox).put(r.id, r.toJson());
 
