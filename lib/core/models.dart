@@ -1,5 +1,15 @@
 import 'dart:convert';
 
+
+String? _normalizeImageUrl(String? raw) {
+  if (raw == null) return null;
+  final v = raw.trim();
+  if (v.isEmpty) return null;
+  if (v.startsWith('//')) return 'https:$v';
+  if (v.startsWith('/')) return 'https://zapshop.by$v';
+  return v;
+}
+
 class Car {
   Car({required this.id, required this.vin, required this.brand, required this.model, required this.generation, required this.year, required this.engine, required this.engineCode, required this.transmission, required this.drive, required this.fuel, required this.mileage, required this.country, required this.isUsaImport, required this.status, required this.comment, this.photoPath = ''});
   final String id;
@@ -60,8 +70,11 @@ class Part {
   final String? description;
   Map<String, dynamic> toJson() => {'id': id, 'title': title, 'brand': brand, 'model': model, 'generation': generation, 'part_name': partName, 'price': price, 'currency': currency, 'address': address, 'main_image': mainImage, 'url': url, 'oem': oem, 'images': images, 'fitments': fitments, 'description': description};
   factory Part.fromJson(Map<String, dynamic> j) {
-    final imgs = (j['images'] as List?)?.map((e) => '$e').toList();
-    final main = j['main_image']?.toString();
+    final imgs = (j['images'] as List?)
+        ?.map((e) => _normalizeImageUrl('$e'))
+        .whereType<String>()
+        .toList();
+    final main = _normalizeImageUrl(j['main_image']?.toString());
     return Part(id: (j['id'] ?? 0) as int, title: '${j['title'] ?? ''}', brand: '${j['brand'] ?? ''}', model: '${j['model'] ?? ''}', generation: '${j['generation'] ?? ''}', partName: '${j['part_name'] ?? ''}', price: j['price'] as num?, currency: j['currency']?.toString(), address: j['address']?.toString(), mainImage: (main == null || main.isEmpty) ? (imgs != null && imgs.isNotEmpty ? imgs.first : null) : main, url: j['url']?.toString(), oem: j['oem'], images: imgs, fitments: (j['fitments'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList(), description: j['description']?.toString());
   }
   static String encodeList(List<Part> list) => jsonEncode(list.map((e) => e.toJson()).toList());

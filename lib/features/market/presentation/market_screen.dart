@@ -65,6 +65,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   final c = TextEditingController();
   final scroll = ScrollController();
   bool onlyActiveCar = false;
+  bool withPhotoOnly = false;
   String selectedCategory = '';
   String sortMode = 'new';
   final categories = const ['Двигатель', 'Коробка', 'Фара', 'Бампер', 'Дверь', 'Капот', 'Крыло', 'Зеркало', 'Радиатор', 'Турбина'];
@@ -132,6 +133,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 setState(() => sortMode = 'cheap');
                 await ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' '));
               }),
+              const SizedBox(width: 8),
+              FilterChip(
+                label: const Text('Только с фото'),
+                selected: withPhotoOnly,
+                onSelected: (v) => setState(() => withPhotoOnly = v),
+              ),
             ]),
             Row(children: [
               Expanded(
@@ -209,10 +216,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       onRefresh: () => ref.read(marketProvider.notifier).refresh(search: [c.text.trim(), selectedCategory].where((e) => e.isNotEmpty).join(' ')),
                       child: ListView.builder(
                         controller: scroll,
-                        itemCount: st.items.length + (st.loading ? 1 : 0),
+                        itemCount: (withPhotoOnly ? st.items.where((e) => e.mainImage != null && e.mainImage!.isNotEmpty).length : st.items.length) + (st.loading ? 1 : 0),
                         itemBuilder: (_, i) {
-                          if (i >= st.items.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-                          final sorted = [...st.items];
+                          final baseItems = withPhotoOnly ? st.items.where((e) => e.mainImage != null && e.mainImage!.isNotEmpty).toList() : st.items;
+                          if (i >= baseItems.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                          final sorted = [...baseItems];
                           if (sortMode == 'cheap') sorted.sort((a, b) => (a.price ?? 1e12).compareTo(b.price ?? 1e12));
                           final p = sorted[i];
                           return TweenAnimationBuilder<double>(
@@ -248,6 +256,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                         Text('${p.brand} ${p.model} ${p.generation}'),
                                         const SizedBox(height: 4),
                                         Text(p.price == null ? 'Цена по запросу' : '${p.price} ${p.currency ?? ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 6),
+                                        Wrap(spacing: 6, runSpacing: 6, children: [
+                                          if ((p.price ?? 1e12) < 120) const Chip(label: Text('🔥 Выгодно'), visualDensity: VisualDensity.compact),
+                                          if ((p.images?.length ?? 0) > 1) const Chip(label: Text('🖼️ Много фото'), visualDensity: VisualDensity.compact),
+                                          if ((p.oem?.toString().isNotEmpty ?? false)) const Chip(label: Text('OEM есть'), visualDensity: VisualDensity.compact),
+                                        ]),
                                       ]),
                                     )
                                   ]),
