@@ -315,6 +315,9 @@ class GarageScreen extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    final vinDecoded = await _decodeVin(vin.text);
+                    final decoded = vinDecoded?.ok == true ? vinDecoded : null;
+
                     final item = Car(
                       id: car?.id ??
                           'car_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999)}',
@@ -323,16 +326,16 @@ class GarageScreen extends ConsumerWidget {
                       model: model.text.trim(),
                       generation: generation.text.trim(),
                       year: year.text.trim(),
-                      engine: car?.engine ?? '',
+                      engine: decoded?.engineDisplay ?? car?.engine ?? '',
                       engineCode: car?.engineCode ?? '',
-                      transmission: car?.transmission ?? '',
+                      transmission: decoded?.transmissionDisplay ?? car?.transmission ?? '',
                       drive: car?.drive ?? '',
-                      fuel: car?.fuel ?? '',
+                      fuel: decoded?.fuelDisplay ?? car?.fuel ?? '',
                       mileage: int.tryParse(mileage.text.trim()) ?? 0,
-                      country: car?.country ?? '',
+                      country: decoded?.plantDisplay ?? car?.country ?? '',
                       isUsaImport: car?.isUsaImport ?? false,
                       status: car?.status ?? 'на ходу',
-                      comment: car?.comment ?? '',
+                      comment: decoded?.prettySummary ?? car?.comment ?? '',
                       photoPath: photoPath,
                     );
 
@@ -555,9 +558,46 @@ class GarageScreen extends ConsumerWidget {
       final make = normalize('Make');
       final model = normalize('Model');
       final year = normalize('ModelYear');
+      final trim = normalize('Trim');
+      final displacement = normalize('DisplacementL');
+      final fuel = normalize('FuelTypePrimary');
+      final engineModel = normalize('EngineModel');
+      final turbo = normalize('Turbo');
+      final bodyClass = normalize('BodyClass');
+      final doors = normalize('Doors');
+      final tStyle = normalize('TransmissionStyle');
+      final tSpeeds = normalize('TransmissionSpeeds');
+      final manufacturer = normalize('Manufacturer');
+      final plantCity = normalize('PlantCity');
+      final plantState = normalize('PlantState');
+      final plantCountry = normalize('PlantCountry');
+      final vehicleType = normalize('VehicleType');
+      final seats = normalize('Seats');
+      final headlight = normalize('LowerBeamHeadlampLightSource');
+      final tpms = normalize('TPMS');
+      final safety = [normalize('ABS'), normalize('ESC'), normalize('LaneKeepSystem'), normalize('BlindSpotMon'), normalize('RearCrossTrafficAlert'), normalize('ForwardCollisionWarning')].whereType<String>().where((x)=>x.toLowerCase()=='standard').toList();
 
       final ok = (errorCode == null || errorCode == '0') &&
           (make != null || model != null || year != null);
+
+      final title = [make, model, year, trim].whereType<String>().where((e)=>e.isNotEmpty).join(' ');
+      final engineDisplay = [displacement, fuel, engineModel, turbo == 'Yes' ? 'turbo' : null].whereType<String>().where((e)=>e.isNotEmpty).join(', ');
+      final transmissionDisplay = [tStyle, tSpeeds == null ? null : '$tSpeeds передач'].whereType<String>().join(', ');
+      final plantDisplay = [plantCity, plantState, plantCountry].whereType<String>().join(', ');
+      final safetyText = safety.isEmpty ? null : 'Безопасность: ABS/ESC/Lane Keep/Blind Spot/Rear Cross Traffic/FCW — Standard';
+      final prettySummary = [
+        title.isEmpty ? null : title,
+        engineDisplay.isEmpty ? null : 'Двигатель: $engineDisplay',
+        bodyClass == null ? null : 'Кузов: $bodyClass${doors == null ? '' : ', $doors двери'}',
+        transmissionDisplay.isEmpty ? null : 'Коробка: $transmissionDisplay',
+        manufacturer == null ? null : 'Производитель: $manufacturer',
+        plantDisplay.isEmpty ? null : 'Завод: $plantDisplay',
+        vehicleType == null ? null : 'Тип авто: $vehicleType',
+        seats == null ? null : 'Мест: $seats',
+        headlight == null ? null : 'Фары: $headlight',
+        tpms == null ? null : 'TPMS: $tpms',
+        safetyText,
+      ].whereType<String>().join('\n');
 
       return _VinDecodedResult(
         ok: ok,
@@ -566,6 +606,11 @@ class GarageScreen extends ConsumerWidget {
         year: year,
         errorText: errorText,
         suggestedVin: suggestedVin.isEmpty ? null : suggestedVin,
+        engineDisplay: engineDisplay.isEmpty ? null : engineDisplay,
+        transmissionDisplay: transmissionDisplay.isEmpty ? null : transmissionDisplay,
+        fuelDisplay: fuel,
+        plantDisplay: plantDisplay.isEmpty ? null : plantDisplay,
+        prettySummary: prettySummary.isEmpty ? null : prettySummary,
       );
     } on DioException catch (e) {
       final msg = e.type == DioExceptionType.connectionError
@@ -597,14 +642,7 @@ class GarageScreen extends ConsumerWidget {
 }
 
 class _VinDecodedResult {
-  _VinDecodedResult({
-    required this.ok,
-    this.make,
-    this.model,
-    this.year,
-    this.errorText,
-    this.suggestedVin,
-  });
+  _VinDecodedResult({required this.ok, this.make, this.model, this.year, this.errorText, this.suggestedVin, this.engineDisplay, this.transmissionDisplay, this.fuelDisplay, this.plantDisplay, this.prettySummary});
 
   final bool ok;
   final String? make;
@@ -612,4 +650,9 @@ class _VinDecodedResult {
   final String? year;
   final String? errorText;
   final String? suggestedVin;
+  final String? engineDisplay;
+  final String? transmissionDisplay;
+  final String? fuelDisplay;
+  final String? plantDisplay;
+  final String? prettySummary;
 }
